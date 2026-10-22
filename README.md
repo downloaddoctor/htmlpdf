@@ -29,6 +29,8 @@ Build locally: `pnpm install && pnpm run build` (outputs to `dist/`).
 
 Interactive playground with examples and copy-ready code: https://downloaddoctor.github.io/htmlpdf/
 
+For LLMs and coding agents: https://downloaddoctor.github.io/htmlpdf/llms.txt
+
 ## Use from source
 
 1. Copy the `src/` folder anywhere.
@@ -82,4 +84,5 @@ Cross-origin images need CORS headers, otherwise they are skipped with a console
 - `src/writer.js` PDF object writer
 - `src/fonts.js` TrueType embedding
 - `docs/index.html` interactive playground with examples and copy-ready code (GitHub Pages site root; locally run `pnpm run build`, then `npx serve docs`)
+- `docs/llms.txt` LLM-oriented summary of the API and rules (served at the site root)
 - `build.js` esbuild bundler, output in `dist/`

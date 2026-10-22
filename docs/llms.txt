@@ -1,0 +1,65 @@
+# htmlpdf
+
+> Browser-only library that turns HTML + CSS into a real vector PDF (selectable text, borders, gradients, images, multi-page). The browser does the layout, the library paints every box and text run into PDF objects. Zero runtime dependencies, plain ES modules, no server.
+
+## Live URLs
+
+- Playground and examples: https://downloaddoctor.github.io/htmlpdf/
+- Script (IIFE, global `htmlpdf`): https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.min.js
+- ES module: https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.esm.min.js
+- Source: https://github.com/downloaddoctor/htmlpdf
+
+## Minimal usage
+
+```html
+<script src="https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.min.js"></script>
+<script>
+  htmlpdf
+    .htmlToPdf('<h1 style="font-family:Inter">Hello</h1>', {
+      fonts: [{ family: 'Inter', weight: 400, url: './Inter-400.ttf' }]
+    })
+    .then((pdf) => htmlpdf.downloadPdf(pdf, 'hello.pdf'));
+</script>
+```
+
+```js
+import { htmlToPdf, downloadPdf } from 'https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.esm.min.js';
+const pdf = await htmlToPdf(document.querySelector('#invoice'), { margin: 12, fonts });
+downloadPdf(pdf, 'invoice.pdf');
+```
+
+## API
+
+`htmlToPdf(input, opts) -> Promise<Uint8Array>`
+- `input`: HTML string or DOM node (cloned).
+- `opts.width`, `opts.height`: page size in mm, default 210 x 297 (A4). `height: 0` = one page as tall as the content.
+- `opts.margin`: mm, default 0.
+- `opts.background`: CSS colour, default `'#fff'`, `null` = none.
+- `opts.hairline`: mm width for borders thinner than 1px, default 0 (keep 1px).
+- `opts.css`: extra CSS string applied to the content.
+- `opts.fonts`: `[{ family, weight = 400, style = 'normal', url }]`, TrueType `.ttf` files, fetched once and cached. Required: at least one font must be provided.
+
+Helpers: `downloadPdf(pdf, name)`, `openPdf(pdf)`, `printPdf(pdf)`, `pdfBlobUrl(pdf)`.
+Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(family, url, { weight, style })`.
+
+## Rules an LLM should follow when generating code
+
+- Always pass `fonts`. They must be the same `.ttf` files the CSS uses (declare matching `@font-face` or use installed fonts with the same family name). OTF/CFF and `.ttc` are not supported.
+- Use font-family names that match `opts.fonts[].family`, otherwise the first registered font is used.
+- Pages: content longer than the page flows onto more pages. Use `break-before: page` and `break-inside: avoid`.
+- Runs only in a browser (needs DOM, canvas, Range). It does not work in Node without a DOM.
+- Cross-origin images need CORS headers, otherwise they are skipped with a console warning.
+
+## Supported CSS
+
+Backgrounds (colour, `url()`, linear/radial/repeating-linear gradients, size, position, repeat, clip, origin), `border-radius`, per-side borders (solid, dashed, dotted, double, collapsed table borders), outer `box-shadow`, `opacity`, 2D `transform`, `overflow` clipping, `<img>` with `object-fit`, inline `<svg>`, `<canvas>`, text (weight, size, colour, `letter-spacing`, `text-transform`, underline/line-through/overline, `text-shadow`, `-webkit-text-stroke`, `paint-order`), `z-index` order.
+
+Not supported: `::before`/`::after`, list markers, inset shadows, filters, blend modes, `clip-path`, conic gradients.
+
+## Source layout
+
+- `src/index.js` public API and helpers
+- `src/paint.js` DOM walker and CSS painter
+- `src/writer.js` PDF object writer
+- `src/fonts.js` TrueType embedding (Identity-H, ToUnicode)
+- `AGENTS.md` architecture notes for contributors and coding agents
