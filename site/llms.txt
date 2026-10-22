@@ -66,4 +66,5 @@ Not supported (a one-time console warning is logged): filters, backdrop-filter, 
 - `src/paint.js` DOM walker and CSS painter
 - `src/writer.js` PDF object writer
 - `src/fonts.js` TrueType embedding (Identity-H, ToUnicode)
+- `src/index.d.ts` TypeScript typings
 - `AGENTS.md` architecture notes for contributors and coding agents

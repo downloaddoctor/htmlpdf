@@ -1,6 +1,6 @@
 {
   "name": "htmlpdf",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "packageManager": "pnpm@12.14.0",
   "description": "HTML + CSS to real vector PDF in the browser. The browser lays out, the PDF embeds real text, borders, gradients and fonts. Zero dependencies, single-file minified build.",
   "type": "module",

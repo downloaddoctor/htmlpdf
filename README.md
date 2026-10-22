@@ -100,6 +100,7 @@ Cross-origin images need CORS headers, otherwise they are skipped with a console
 - `src/paint.js` CSS painter (DOM walk)
 - `src/writer.js` PDF object writer
 - `src/fonts.js` TrueType embedding
+- `src/index.d.ts` TypeScript typings
 - `site/index.html` interactive playground with examples and copy-ready code (copied into dist/, the GitHub Pages root; locally run `pnpm run build`, then `npx serve dist`)
 - `site/llms.txt` LLM-oriented summary of the API and rules (served at the site root)
 - `build.js` esbuild bundler, output in `dist/`

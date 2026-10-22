@@ -541,6 +541,33 @@
           >
         </div>
 
+        <div class="row">
+          <label
+            >Title
+            <input id="mTitle" type="text" />
+            <small><code>title</code>: PDF document properties.</small>
+          </label>
+          <label
+            >Author
+            <input id="mAuthor" type="text" />
+            <small><code>author</code></small>
+          </label>
+          <label
+            >Subject
+            <input id="mSubject" type="text" />
+            <small><code>subject</code></small>
+          </label>
+          <label
+            >Keywords
+            <input id="mKeywords" type="text" />
+            <small><code>keywords</code></small>
+          </label>
+          <label
+            >Creator
+            <input id="mCreator" type="text" />
+            <small><code>creator</code></small>
+          </label>
+        </div>
         <h2><b>2</b> HTML + CSS (edit me)</h2>
         <textarea id="src" spellcheck="false"></textarea>
         <div class="row">
@@ -685,6 +712,32 @@
 </div>`
         },
         {
+          name: 'Links + metadata',
+          note: 'Clickable <a href> links (http, https, mailto, tel) and PDF document properties (title, author, subject, keywords, creator).',
+          opts: {
+            preset: 'a4',
+            margin: 0,
+            meta: {
+              title: 'htmlpdf links demo',
+              author: 'Jane Doe',
+              subject: 'Link annotations',
+              keywords: 'pdf, links, metadata',
+              creator: 'htmlpdf playground'
+            }
+          },
+          html: `<style>
+  .links { font-family: Lato; padding: 16mm; }
+  .links h1 { margin: 0 0 8px; color: #3454d1; }
+  .links a { color: #3454d1; }
+</style>
+<div class="links">
+  <h1>Links and metadata</h1>
+  <p>Visit <a href="https://downloaddoctor.github.io/htmlpdf/">the htmlpdf site</a>.</p>
+  <p>Write to <a href="mailto:hello@example.com">hello@example.com</a> or call <a href="tel:+15551234567">+1 555 123 4567</a>.</p>
+  <p>Open the PDF properties to see the title, author and keywords.</p>
+</div>`
+        },
+        {
           name: 'Invoice (multi page)',
           note: 'A long table flows onto more pages. A margin keeps content off the edges.',
           opts: { preset: 'a4', margin: 12 },
@@ -813,6 +866,10 @@
         $('preset').value = ex.opts.preset;
         applyPreset();
         $('margin').value = ex.opts.margin;
+        const meta = ex.opts.meta || {};
+        ['title', 'author', 'subject', 'keywords', 'creator'].forEach((k) => {
+          $('m' + k[0].toUpperCase() + k.slice(1)).value = meta[k] || '';
+        });
         $('src').value = ex.html;
         run();
       }
@@ -823,7 +880,12 @@
           height: Math.max(0, +$('height').value || 0),
           margin: Math.max(0, +$('margin').value || 0),
           background: $('noBg').checked ? null : $('background').value,
-          hairline: Math.max(0, +$('hairline').value || 0)
+          hairline: Math.max(0, +$('hairline').value || 0),
+          title: $('mTitle').value,
+          author: $('mAuthor').value,
+          subject: $('mSubject').value,
+          keywords: $('mKeywords').value,
+          creator: $('mCreator').value
         };
         return o;
       }
@@ -840,6 +902,9 @@
         else if (o.background.toLowerCase() !== '#ffffff')
           lines.push(`  background: '${o.background}',`);
         if (o.hairline) lines.push(`  hairline: ${o.hairline},`);
+        ['title', 'author', 'subject', 'keywords', 'creator'].forEach(
+          (k) => o[k] && lines.push(`  ${k}: ${JSON.stringify(o[k])},`)
+        );
         if (FONTS.length) {
           lines.push('  fonts: [');
           FONTS.forEach((f) =>
@@ -968,9 +1033,18 @@ downloadPdf(pdf, 'document.pdf'); // or openPdf(pdf) / printPdf(pdf)`;
         }
       };
       $('src').addEventListener('input', later);
-      ['margin', 'hairline', 'background', 'noBg', 'asNode'].forEach((id) =>
-        $(id).addEventListener('input', later)
-      );
+      [
+        'margin',
+        'hairline',
+        'background',
+        'noBg',
+        'asNode',
+        'mTitle',
+        'mAuthor',
+        'mSubject',
+        'mKeywords',
+        'mCreator'
+      ].forEach((id) => $(id).addEventListener('input', later));
       ['width', 'height'].forEach((id) =>
         $(id).addEventListener('input', () => {
           $('preset').value = 'custom';
