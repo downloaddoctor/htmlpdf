@@ -5,14 +5,14 @@
 ## Live URLs
 
 - Playground and examples: https://downloaddoctor.github.io/htmlpdf/
-- Script (IIFE, global `htmlpdf`): https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.min.js
-- ES module: https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.esm.min.js
+- Script (IIFE, global `htmlpdf`): https://downloaddoctor.github.io/htmlpdf/htmlpdf.min.js
+- ES module: https://downloaddoctor.github.io/htmlpdf/htmlpdf.esm.min.js
 - Source: https://github.com/downloaddoctor/htmlpdf
 
 ## Minimal usage
 
 ```html
-<script src="https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.min.js"></script>
+<script src="https://downloaddoctor.github.io/htmlpdf/htmlpdf.min.js"></script>
 <script>
   htmlpdf
     .htmlToPdf('<h1 style="font-family:Inter">Hello</h1>', {
@@ -23,7 +23,7 @@
 ```
 
 ```js
-import { htmlToPdf, downloadPdf } from 'https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.esm.min.js';
+import { htmlToPdf, downloadPdf } from 'https://downloaddoctor.github.io/htmlpdf/htmlpdf.esm.min.js';
 const pdf = await htmlToPdf(document.querySelector('#invoice'), { margin: 12, fonts });
 downloadPdf(pdf, 'invoice.pdf');
 ```

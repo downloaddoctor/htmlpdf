@@ -9,7 +9,7 @@ Zero dependencies, no build step, plain ES modules. Works in any modern browser.
 Load the single-file minified build straight from GitHub Pages (no npm, no build).
 
 ```html
-<script src="https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.min.js"></script>
+<script src="https://downloaddoctor.github.io/htmlpdf/htmlpdf.min.js"></script>
 <script>
   htmlpdf
     .htmlToPdf('<h1>Hello</h1>', {
@@ -20,7 +20,7 @@ Load the single-file minified build straight from GitHub Pages (no npm, no build
 ```
 
 ```js
-import { htmlToPdf } from 'https://downloaddoctor.github.io/htmlpdf/dist/htmlpdf.esm.min.js';
+import { htmlToPdf } from 'https://downloaddoctor.github.io/htmlpdf/htmlpdf.esm.min.js';
 ```
 
 Build locally: `pnpm install && pnpm run build` (outputs to `dist/`).
@@ -83,6 +83,6 @@ Cross-origin images need CORS headers, otherwise they are skipped with a console
 - `src/paint.js` CSS painter (DOM walk)
 - `src/writer.js` PDF object writer
 - `src/fonts.js` TrueType embedding
-- `docs/index.html` interactive playground with examples and copy-ready code (GitHub Pages site root; locally run `pnpm run build`, then `npx serve docs`)
-- `docs/llms.txt` LLM-oriented summary of the API and rules (served at the site root)
+- `site/index.html` interactive playground with examples and copy-ready code (copied into dist/, the GitHub Pages root; locally run `pnpm run build`, then `npx serve dist`)
+- `site/llms.txt` LLM-oriented summary of the API and rules (served at the site root)
 - `build.js` esbuild bundler, output in `dist/`

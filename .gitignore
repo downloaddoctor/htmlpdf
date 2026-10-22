@@ -1,6 +1,5 @@
 node_modules/
 dist/
-docs/dist/
 .pnpm-store/
 *.log
 .DS_Store
