@@ -18,10 +18,10 @@ build.js — esbuild bundler → dist/
 .github/workflows/pages.yml — build + deploy dist/ to GitHub Pages on push to main
 
 # MODULES
-src/index.js — htmlToPdf: offscreen host div, font loading+cache, render, PdfDoc.build; downloadPdf/openPdf/printPdf/pdfBlobUrl
-src/paint.js — DOM walker; paints backgrounds, gradients, borders, shadows, images, text, pagination → Page ops
-src/writer.js — PdfDoc/Page: PDF objects, content stream ops, shading, images, deflate via CompressionStream
-src/fonts.js — registry + TrueType parser/embedder (CIDFontType2 Identity-H, ToUnicode)
+src/index.js — htmlToPdf: offscreen host div, font load/auto-discovery, render, PdfDoc.build; downloadPdf/openPdf/printPdf/pdfBlobUrl
+src/paint.js — DOM walker; paints backgrounds, gradients, borders, shadows, images, text, pagination → Page ops; non-mutating box measurement (translate compensated, rotation/scale neutralised temporarily)
+src/writer.js — PdfDoc/Page: PDF objects, content stream ops, shading, images, deflate via CompressionStream; Type1 WinAnsi text
+src/fonts.js — registry (TrueType embedder CIDFontType2 Identity-H + ToUnicode), Standard 14 fallback (Helvetica/Times/Courier), @font-face discovery (ttf/data URLs)
 
 # ARCHITECTURE
 src/index.js → src/paint.js (render, MM) → src/fonts.js (pickFont)
@@ -35,7 +35,7 @@ gradients: opaque → PDF shading; translucent → rasterised
 
 # SCHEMA
 htmlToPdf(input: string|Node, opts) → Promise<Uint8Array>
-opts: width=210 height=297 margin=0 background='#fff' hairline=0 css='' fonts=[{family,weight,style,url}]
+opts: width=210 height=297 margin=0 background='#fff' hairline=0 css='' fonts=[{family,weight,style,url}] noAutoFonts=false (auto-discover @font-face)
 
 # ENV
 runtime: modern browser (DOM, canvas, CompressionStream optional)

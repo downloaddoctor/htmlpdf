@@ -3,6 +3,30 @@
 // PdfDoc: addPage(wPx, hPx) -> Page, add(dict, data?) -> objId, addShading(def) -> name, build() -> Promise<Uint8Array>.
 
 const K = 0.75;
+
+// Use String.fromCharCode(92) for backslash so the source never contains a bare
+// escaped-quote sequence (which would be a JS string literal error).
+const BS = String.fromCharCode(92);
+
+function escapeWinAnsi(hex) {
+  let out = '';
+  for (let i = 0; i < hex.length; i += 2) {
+    const b = parseInt(hex.slice(i, i + 2), 16);
+    if (b === 92) {
+      out += BS + BS; // literal backslash -> \
+    } else if (b === 40) {
+      out += BS + '('; // open paren -> \(
+    } else if (b === 41) {
+      out += BS + ')'; // close paren -> \)
+    } else if (b < 32 || b > 126) {
+      out += BS + b.toString(8).padStart(3, '0'); // \ooo octal
+    } else {
+      out += String.fromCharCode(b);
+    }
+  }
+  return out;
+}
+
 const f = (v) => {
   const s = (+v).toFixed(3);
   return s.indexOf('.') < 0 ? s : s.replace(/0+$/, '').replace(/\.$/, '');
@@ -97,14 +121,20 @@ export class Page {
   clip(evenOdd) {
     return this.op(evenOdd ? 'W* n' : 'W n');
   }
-  // Text: glyph hex string already encoded for the font (Identity-H 2 bytes/glyph).
+  // Text: hex string already encoded for the font. TrueType faces use Identity-H
+  // (2 hex digits per glyph), standard PDF fonts use WinAnsi (2 hex digits per byte).
   text(font, size, x, y, hex, o = {}) {
     if (!this.fonts.has(font.key)) this.fonts.set(font.key, { name: 'F' + this.fonts.size, font });
     const nm = this.fonts.get(font.key).name;
     let s = 'BT ';
-    if (o.mode) s += `${o.mode} Tr ${f(o.strokeW || 0)} w `;
+    if (o.mode && !font.std) s += `${o.mode} Tr ${f(o.strokeW || 0)} w `;
     if (o.spacing) s += `${f(o.spacing)} Tc `;
-    s += `/${nm} ${f(size)} Tf 1 0 0 -1 ${f(x)} ${f(y)} Tm <${hex}> Tj ET`;
+    if (font.std) {
+      // Standard 14 fonts take a literal string in WinAnsi encoding.
+      s += `/${nm} ${f(size)} Tf 1 0 0 -1 ${f(x)} ${f(y)} Tm (${escapeWinAnsi(hex)}) Tj ET`;
+    } else {
+      s += `/${nm} ${f(size)} Tf 1 0 0 -1 ${f(x)} ${f(y)} Tm <${hex}> Tj ET`;
+    }
     // Tf size is in user units (px) because the base matrix scales by K.
     return this.op(s);
   }
@@ -124,6 +154,7 @@ export class PdfDoc {
     this.pages = [];
     this.shadings = new Map();
     this.images = new Map();
+    this.stdFonts = new Map();
   }
   add(dict, data, compress = true) {
     this.objs.push({ dict, data, compress });

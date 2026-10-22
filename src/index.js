@@ -13,7 +13,7 @@
 // Helpers: pdfBlobUrl, openPdf, downloadPdf, printPdf. Low level: registerFont, registerFontUrl.
 
 import { PdfDoc } from './writer.js';
-import { registerFont, hasFonts } from './fonts.js';
+import { registerFont, discoverFonts } from './fonts.js';
 import { render, MM } from './paint.js';
 
 export { registerFont };
@@ -61,6 +61,7 @@ function loadFonts(list) {
  * @property {number} [hairline] width in mm for borders thinner than 1px (default 0)
  * @property {string} [css] extra CSS applied to the content
  * @property {FontSource[]} [fonts] fonts to load once and cache
+ * @property {boolean} [noAutoFonts] disable automatic @font-face discovery (default false)
  */
 
 /**
@@ -70,9 +71,9 @@ function loadFonts(list) {
  * @returns {Promise<Uint8Array>}
  */
 export async function htmlToPdf(input, opts = {}) {
-  const o = { width: 210, height: 297, margin: 0, background: '#fff', hairline: 0, css: '', fonts: [], ...opts };
+  const o = { width: 210, height: 297, margin: 0, background: '#fff', hairline: 0, css: '', fonts: [], noAutoFonts: false, ...opts };
   if (o.fonts.length) await loadFonts(o.fonts);
-  if (!hasFonts()) throw new Error('htmlpdf: no font. Pass opts.fonts [{ family, weight, url }] (the font files your CSS uses).');
+  else if (!o.noAutoFonts) await discoverFonts(document);
   const host = document.createElement('div');
   host.setAttribute('aria-hidden', 'true');
   host.style.cssText = `position:absolute;left:-100000px;top:0;margin:0;padding:0;box-sizing:border-box;width:${o.width * MM - 2 * (o.margin || 0) * MM}px`;
@@ -88,6 +89,7 @@ export async function htmlToPdf(input, opts = {}) {
   document.body.appendChild(host);
   try {
     void host.offsetHeight;
+    await discoverFonts(host); // @font-face rules inside the input's inline <style>
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
     const doc = new PdfDoc();
     await render(host, doc, o);

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PdfDoc } from '../src/writer.js';
-import { registerFont, hasFonts } from '../src/fonts.js';
+import { registerFont, hasFonts, pickFont } from '../src/fonts.js';
 
 const latin1 = (u8) => Buffer.from(u8).toString('latin1');
 
@@ -47,4 +47,16 @@ test('registerFont rejects unusable font data', () => {
   new DataView(ttc).setUint32(0, 0x74746366);
   assert.throws(() => registerFont({ family: 'x', data: ttc }), /\.ttc/);
   assert.equal(hasFonts(), false);
+});
+
+test('pickFont falls back to standard 14 when no TrueType is registered', () => {
+  const sans = pickFont('Arial, sans-serif', 400, 'normal');
+  assert.equal(sans.std, true);
+  assert.equal(sans.base, 'Helvetica');
+  const bold = pickFont('Verdana, sans-serif', 700, 'normal');
+  assert.equal(bold.base, 'Helvetica-Bold');
+  const serif = pickFont('Georgia, serif', 700, 'italic');
+  assert.equal(serif.base, 'Times-BoldItalic');
+  const mono = pickFont('ui-monospace, monospace', 400, 'normal');
+  assert.equal(mono.base, 'Courier');
 });

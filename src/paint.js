@@ -764,10 +764,25 @@ function paintEl(S, el) {
   const op = parseFloat(cs.opacity);
   const tm = cs.transform && cs.transform !== 'none' ? parseMatrix(cs.transform) : null;
   const origin = cs.transformOrigin;
-  const prevT = el.style.transform;
   const prevAlpha = S.alpha;
-  if (tm) el.style.transform = 'none';
-  const rect = el.getBoundingClientRect();
+  const prevNonTrivial = S.nonTrivial;
+  let rect;
+  // Prefer real measured values without touching style. For a pure translation,
+  // getBoundingClientRect() is the local box shifted by the matrix; we recover it
+  // by subtracting the translate. For rotation/scale we must neutralise the
+  // transform to measure the untransformed box (the element is a clone inside a
+  // hidden host, so this has no visible effect).
+  if (tm && S.nonTrivial === false && tm[0] === 1 && tm[1] === 0 && tm[2] === 0 && tm[3] === 1) {
+    const b = el.getBoundingClientRect();
+    rect = { left: b.left - tm[4], top: b.top - tm[5], width: b.width, height: b.height };
+  }
+  if (!rect) {
+    const prevT = el.style.transform;
+    if (tm) el.style.transform = 'none';
+    rect = el.getBoundingClientRect();
+    if (tm) el.style.transform = prevT;
+  }
+  if (tm && (tm[0] !== 1 || tm[1] !== 0 || tm[2] !== 0 || tm[3] !== 1)) S.nonTrivial = true;
   const saved = op < 1 || tm;
   if (saved) page.save();
   if (op < 1) S.alpha *= op;
@@ -833,7 +848,7 @@ function paintEl(S, el) {
   }
   if (saved) page.restore();
   S.alpha = prevAlpha;
-  if (tm) el.style.transform = prevT;
+  S.nonTrivial = prevNonTrivial;
 }
 
 // Pushes elements down (margin-top) so break-before: page starts a page and break-inside: avoid never straddles one.
@@ -855,7 +870,7 @@ function paginate(host, contentH) {
 }
 
 export async function render(host, doc, opts) {
-  const S = { doc, page: null, o: null, alpha: 1, imgs: new Map(), hair: (opts.hairline || 0) * MM, top: 0, bottom: Infinity };
+  const S = { doc, page: null, o: null, alpha: 1, imgs: new Map(), hair: (opts.hairline || 0) * MM, top: 0, bottom: Infinity, nonTrivial: false };
   await preload(S, host);
   const pw = opts.width * MM;
   const m = (opts.margin || 0) * MM;
