@@ -52,6 +52,23 @@ test('shadings and images with alpha are written', async () => {
   assert.match(s, /\/SMask \d+ 0 R/);
 });
 
+test('link annotations and Info metadata are written', async () => {
+  const doc = new PdfDoc();
+  doc.info = { title: 'Hello (test)', author: 'Me' };
+  const page = doc.addPage(200, 200);
+  page.link(10, 20, 50, 10, 'https://example.com/a(b)');
+  page.link(0, 0, 0, 10, 'https://skipped.example');
+  const s = latin1(await doc.build());
+  assert.match(s, /\/Subtype \/Link/);
+  assert.match(s, /\/URI \(https:\/\/example\.com\/a\\\(b\\\)\)/);
+  assert.match(s, /\/Annots \[/);
+  assert.match(s, /\/Info \d+ 0 R/);
+  assert.match(s, /\/Title <FEFF/);
+  assert.doesNotMatch(s, /skipped\.example/);
+  const rect = /\/Rect \[([^\]]+)\]/.exec(s)[1].split(' ').map(Number);
+  assert.deepEqual(rect, [7.5, 127.5, 45, 135]);
+});
+
 test('registerFont rejects unusable font data', () => {
   assert.throws(
     () => registerFont({ family: 'x', data: new ArrayBuffer(4) }),

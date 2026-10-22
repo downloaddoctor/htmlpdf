@@ -21,6 +21,13 @@ const SKIP = new Set([
   'TITLE'
 ]);
 
+const warned = new Set();
+function warnOnce(msg) {
+  if (warned.has(msg)) return;
+  warned.add(msg);
+  console.warn('[htmlpdf] ' + msg);
+}
+
 function warn(msg) {
   console.warn('[htmlpdf] ' + msg);
 }
@@ -1438,6 +1445,21 @@ function paintEl(S, el) {
   if (tm && (tm[0] !== 1 || tm[1] !== 0 || tm[2] !== 0 || tm[3] !== 1))
     S.nonTrivial = true;
   const tag = el.tagName.toLowerCase();
+  if (cs.filter && cs.filter !== 'none')
+    warnOnce('unsupported CSS: filter (ignored)');
+  if (cs.backdropFilter && cs.backdropFilter !== 'none')
+    warnOnce('unsupported CSS: backdrop-filter (ignored)');
+  if (cs.mixBlendMode && cs.mixBlendMode !== 'normal')
+    warnOnce('unsupported CSS: mix-blend-mode (ignored)');
+  if (
+    (cs.maskImage && cs.maskImage !== 'none') ||
+    (cs.webkitMaskImage && cs.webkitMaskImage !== 'none')
+  )
+    warnOnce('unsupported CSS: mask-image (ignored)');
+  if (cs.columnCount && cs.columnCount !== 'auto')
+    warnOnce('unsupported CSS: multi-column layout (painted as laid out, breaks not handled)');
+  if (cs.position === 'fixed' || cs.position === 'sticky')
+    warnOnce('unsupported CSS: position ' + cs.position + ' (treated as laid out in the offscreen host)');
   const display = cs.display;
   const inline = display === 'inline';
   const clip = !inline && cs.clipPath && cs.clipPath !== 'none';
@@ -1490,6 +1512,16 @@ function paintEl(S, el) {
       });
       if (flags && flags.skipL) bw[3] = 0;
       if (flags && flags.skipR) bw[1] = 0;
+      if (tag === 'a' && !S.nonTrivial) {
+        const href = el.getAttribute('href');
+        if (href && /^(https?:|mailto:|tel:)/i.test(el.href)) {
+          const lx = r.x + S.m;
+          const ly = r.y + S.m - S.top;
+          const y0 = Math.max(ly, 0);
+          const y1 = Math.min(ly + r.h, page.h);
+          page.link(lx, y0, r.w, y1 - y0, el.href);
+        }
+      }
       if (cs.display === 'list-item') paintListMarker(S, el, cs, r);
       if (!collapse) paintShadows(S, cs, r, rad);
       paintBackground(S, cs, r, rad, collapse ? [0, 0, 0, 0] : bw);
@@ -1597,6 +1629,7 @@ export async function render(host, doc, opts) {
   await preload(S, host);
   const pw = opts.width * MM;
   const m = (opts.margin || 0) * MM;
+  S.m = m;
   const auto = !opts.height;
   const ph = auto ? 0 : opts.height * MM;
   const contentH = auto ? 0 : ph - 2 * m;

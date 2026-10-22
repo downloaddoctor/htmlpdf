@@ -68,6 +68,8 @@ Set `noAutoFonts: true` to disable discovery. OTF/CFF and `.ttc` are not support
 | `fonts`           | `[]`     | `[{ family, weight, style, url }]`; omit for automatic `@font-face` discovery |
 | `noAutoFonts`     | `false`  | Set `true` to skip automatic `@font-face` discovery                           |
 
+Metadata options: `title`, `author`, `subject`, `keywords`, `creator` are written to the PDF `/Info` dictionary. `<a href>` with http(s), mailto or tel URLs become clickable link annotations. TypeScript typings ship in `src/index.d.ts`.
+
 Helpers: `downloadPdf(pdf, name)`, `printPdf(pdf)`, `openPdf(pdf)`, `pdfBlobUrl(pdf)`.
 Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(family, url, { weight, style })`.
 
@@ -88,7 +90,7 @@ Backgrounds (colour, `url()`, linear/radial/repeating-linear gradients, size, po
 `overflow` clipping, `<img>` (`object-fit`), inline `<svg>`, `<canvas>`, text (weight, size, colour, `letter-spacing`,
 `text-transform`, underline/line-through, `text-shadow`, `-webkit-text-stroke`, `paint-order`), `z-index` order.
 
-Not supported: filters, blend modes. (`::before`/`::after` — including their CSS inline styles and `attr()` content — and list markers are now rendered.)
+Not supported (a one-time console warning is logged): filters, backdrop-filter, blend modes, mask-image, multi-column layout, position fixed/sticky. (`::before`/`::after` — including their CSS inline styles and `attr()` content — and list markers are now rendered.)
 
 Cross-origin images need CORS headers, otherwise they are skipped with a console warning.
 

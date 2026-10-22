@@ -73,6 +73,11 @@ function loadFonts(list) {
  * @property {string} [css] extra CSS applied to the content
  * @property {FontSource[]} [fonts] fonts to load once and cache
  * @property {boolean} [noAutoFonts] disable automatic @font-face discovery (default false)
+ * @property {string} [title] PDF document title (metadata)
+ * @property {string} [author] PDF author (metadata)
+ * @property {string} [subject] PDF subject (metadata)
+ * @property {string} [keywords] PDF keywords (metadata)
+ * @property {string} [creator] PDF creator application (metadata)
  */
 
 /**
@@ -123,6 +128,13 @@ export async function htmlToPdf(input, opts = {}) {
     if (!o.noAutoFonts) await discoverFonts(host); // @font-face rules inside the input's inline <style>
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
     const doc = new PdfDoc();
+    doc.info = {
+      title: o.title,
+      author: o.author,
+      subject: o.subject,
+      keywords: o.keywords,
+      creator: o.creator
+    };
     await render(host, doc, o);
     return await doc.build();
   } finally {

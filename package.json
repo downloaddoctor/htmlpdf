@@ -6,8 +6,10 @@
   "type": "module",
   "main": "./dist/htmlpdf.esm.min.js",
   "module": "./dist/htmlpdf.esm.min.js",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
+      "types": "./src/index.d.ts",
       "import": "./dist/htmlpdf.esm.min.js",
       "default": "./dist/htmlpdf.esm.min.js"
     },

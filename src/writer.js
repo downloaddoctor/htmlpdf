@@ -47,6 +47,23 @@ async function deflate(u8) {
   }
 }
 
+const pdfStr = (s) =>
+  '(' +
+  String(s)
+    .split(BS)
+    .join(BS + BS)
+    .replace(/[()]/g, (c) => BS + c)
+    .replace(/[^\x20-\x7e]/g, '') +
+  ')';
+
+const textStr = (s) => {
+  s = String(s);
+  let h = 'FEFF';
+  for (let i = 0; i < s.length; i++)
+    h += s.charCodeAt(i).toString(16).padStart(4, '0');
+  return '<' + h.toUpperCase() + '>';
+};
+
 export class Page {
   constructor(doc, w, h) {
     this.doc = doc;
@@ -57,6 +74,7 @@ export class Page {
     this.xobjs = new Map();
     this.gs = new Map();
     this.shs = new Map();
+    this.links = [];
   }
   op(s) {
     this.ops.push(s);
@@ -182,6 +200,11 @@ export class Page {
       `q ${f(w)} 0 0 ${f(-h)} ${f(x)} ${f(y + h)} cm /${this.xobjs.get(img.id)} Do Q`
     );
   }
+  // Clickable URI area in CSS px (y down, same space as the other ops).
+  link(x, y, w, h, url) {
+    if (w > 0 && h > 0 && url) this.links.push({ x, y, w, h, url });
+    return this;
+  }
   shading(name) {
     this.shs.set(name, name);
     return this.op(`/${name} sh`);
@@ -190,6 +213,7 @@ export class Page {
 
 export class PdfDoc {
   constructor() {
+    this.info = {}; // { title, author, subject, keywords, creator }
     this.objs = [null, null]; // 1 catalog, 2 pages (filled in build)
     this.pages = [];
     this.shadings = new Map();
@@ -199,6 +223,20 @@ export class PdfDoc {
   add(dict, data, compress = true) {
     this.objs.push({ dict, data, compress });
     return this.objs.length;
+  }
+  buildInfo() {
+    const i = this.info || {};
+    const keys = {
+      title: 'Title',
+      author: 'Author',
+      subject: 'Subject',
+      keywords: 'Keywords',
+      creator: 'Creator'
+    };
+    let d = '';
+    for (const k in keys) if (i[k]) d += ` /${keys[k]} ${textStr(i[k])}`;
+    d += ' /Producer ' + textStr('htmlpdf');
+    return this.add('<<' + d + ' >>');
   }
   addPage(w, h) {
     const p = new Page(this, w, h);
@@ -250,9 +288,18 @@ export class PdfDoc {
   }
   async build() {
     const enc = new TextEncoder();
+    const infoRef = this.buildInfo();
     const pageIds = [];
     for (const p of this.pages) {
       const cid = this.add('<<', enc.encode(p.ops.join('\n')));
+      const annotIds = p.links.map((l) =>
+        this.add(
+          `<< /Type /Annot /Subtype /Link /Rect [${f(l.x * K)} ${f((p.h - l.y - l.h) * K)} ${f((l.x + l.w) * K)} ${f((p.h - l.y) * K)}] /Border [0 0 0] /A << /S /URI /URI ${pdfStr(l.url)} >> >>`
+        )
+      );
+      const annots = annotIds.length
+        ? ` /Annots [${annotIds.map((i) => i + ' 0 R').join(' ')}]`
+        : '';
       const font = [...p.fonts.values()]
         .map((v) => `/${v.name} ${v.font.ref(this)} 0 R`)
         .join(' ');
@@ -267,7 +314,7 @@ export class PdfDoc {
         .join(' ');
       pageIds.push(
         this.add(
-          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(p.w * K)} ${f(p.h * K)}] /Contents ${cid} 0 R /Resources << /Font << ${font} >> /XObject << ${xo} >> /ExtGState << ${gs} >> /Shading << ${sh} >> >> >>`,
+          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(p.w * K)} ${f(p.h * K)}] /Contents ${cid} 0 R${annots} /Resources << /Font << ${font} >> /XObject << ${xo} >> /ExtGState << ${gs} >> /Shading << ${sh} >> >> >>`,
           null
         )
       );
@@ -317,7 +364,7 @@ export class PdfDoc {
     const xref = len;
     let x = `xref\n0 ${this.objs.length + 1}\n0000000000 65535 f \n`;
     for (const o of offs) x += String(o).padStart(10, '0') + ' 00000 n \n';
-    x += `trailer\n<< /Size ${this.objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    x += `trailer\n<< /Size ${this.objs.length + 1} /Root 1 0 R /Info ${infoRef} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
     str(x);
     const out = new Uint8Array(len);
     let p = 0;

@@ -40,6 +40,8 @@ downloadPdf(pdf, 'invoice.pdf');
 - `opts.fonts`: `[{ family, weight = 400, style = 'normal', url }]`, TrueType `.ttf` files, fetched once and cached. Optional: if omitted, `@font-face` rules are discovered automatically from the page and from inline `opts.css`; faces still missing fall back to the PDF standard 14 fonts (Helvetica/Times/Courier) so no font files are needed.
 - `opts.noAutoFonts`: boolean, default false. Set true to disable automatic `@font-face` discovery.
 
+Metadata: `opts.title`, `opts.author`, `opts.subject`, `opts.keywords`, `opts.creator` go to the PDF `/Info` dictionary. `<a href>` (http, https, mailto, tel) becomes a clickable link annotation. Typings: `src/index.d.ts`.
+
 Helpers: `downloadPdf(pdf, name)`, `openPdf(pdf)`, `printPdf(pdf)`, `pdfBlobUrl(pdf)`.
 Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(family, url, { weight, style })`.
 
@@ -56,7 +58,7 @@ Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(fam
 
 Backgrounds (colour, `url()`, linear/radial/repeating-linear gradients, size, position, repeat, clip, origin), `border-radius`, per-side borders (solid, dashed, dotted, double, collapsed table borders), outer `box-shadow`, `opacity`, 2D `transform`, `overflow` clipping, `<img>` with `object-fit`, inline `<svg>`, `<canvas>`, text (weight, size, colour, `letter-spacing`, `text-transform`, underline/line-through/overline, `text-shadow`, `-webkit-text-stroke`, `paint-order`), `z-index` order.
 
-Not supported: filters, blend modes. (`::before`/`::after` and list markers are now rendered.)
+Not supported (a one-time console warning is logged): filters, backdrop-filter, blend modes, mask-image, multi-column layout, position fixed/sticky. (`::before`/`::after` and list markers are now rendered.)
 
 ## Source layout
 
