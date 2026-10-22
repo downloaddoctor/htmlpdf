@@ -1,11 +1,11 @@
 // CSS painter for htmlpdf: walks the laid-out DOM (the browser is the layout engine) and paints every box, border,
 // background layer, shadow, image and text run into the PdfDoc as vectors. Units: CSS px, y down, relative to the host.
-// Covered: background-color/image (url, linear/radial-gradient, size/position/repeat/clip/origin), border-radius,
-// per-side borders (solid/dashed/dotted/double, collapsed table borders), box-shadow (outer, blurred), opacity,
-// transform (2D matrix), overflow clip, img (object-fit/position), inline svg and canvas (rasterised), text
-// (font weight/size/color, letter-spacing, text-transform, underline/line-through/overline, text-shadow, text-stroke
-// + paint-order), z-index order, multi-page with break-before / break-inside.
-// Not covered: pseudo-elements, list markers, inset shadows, filters, blend modes, clip-path, conic/repeating gradients.
+// Covered: background-color/image (url, linear/radial/conic-gradient, size/position/repeat/clip/origin), border-radius,
+// per-side borders (solid/dashed/dotted/double, collapsed table borders), box-shadow (outer/inset, blurred), opacity,
+// transform (2D matrix), overflow clip, clip-path (inset/circle/ellipse/polygon), img (object-fit/position),
+// inline svg and canvas (rasterised), text (font weight/size/color, letter-spacing, text-transform, underline/line-through/overline,
+// text-shadow, text-stroke + paint-order), z-index order, multi-page with break-before / break-inside.
+// Not covered: pseudo-elements, list markers, filters, blend modes.
 
 import { pickFont } from './fonts.js';
 
@@ -95,6 +95,90 @@ function insetRad(rad, t, r, b, l) {
 function pathBox(page, x, y, w, h, rad) {
   if (hasRad(rad)) page.roundRect(x, y, w, h, rad);
   else page.rect(x, y, w, h);
+}
+
+// clip-path helper: emits the shape path and clips. Returns true if applied.
+function clipPathShape(page, cs, r) {
+  const v = cs.clipPath;
+  if (!v || v === 'none') return false;
+  const m = /^(inset|circle|ellipse|polygon)\(([\s\S]*)\)$/.exec(v);
+  if (!m) {
+    warn('unsupported clip-path: ' + v.slice(0, 40));
+    return false;
+  }
+  const kind = m[1];
+  const arg = m[2].trim();
+  const w = r.w;
+  const h = r.h;
+  const len = (s, ref) => (String(s).endsWith('%') ? (parseFloat(s) * ref) / 100 : parseFloat(s) || 0);
+  if (kind === 'inset') {
+    const rm = /^([\s\S]*?)(?:\s+round\s+([\s\S]*))?$/.exec(arg);
+    const sides = rm[1].split(/\s+/).filter(Boolean);
+    if (!sides.length) return false;
+    const t = len(sides[0], h);
+    const ri = len(sides[1] || sides[0], w);
+    const b = len(sides[2] || sides[0], h);
+    const l = len(sides[3] || sides[1] || sides[0], w);
+    if (rm[2]) {
+      const rv = rm[2].split(/\s+/).filter(Boolean).map((s) => len(s, w));
+      const R = [
+        [rv[0], rv[1] || rv[0]],
+        [rv[2] || rv[0], rv[3] || rv[1] || rv[0]],
+        [rv[4] || rv[2] || rv[0], rv[5] || rv[3] || rv[1] || rv[0]],
+        [rv[6] || rv[4] || rv[2] || rv[0], rv[7] || rv[5] || rv[3] || rv[1] || rv[0]],
+      ];
+      page.roundRect(r.x + l, r.y + t, w - l - ri, h - t - b, R);
+    } else {
+      page.rect(r.x + l, r.y + t, w - l - ri, h - t - b);
+    }
+    page.clip();
+    return true;
+  }
+  if (kind === 'polygon') {
+    const pts = arg.split(',').map((p) => p.trim().split(/\s+/).filter(Boolean)).filter((p) => p.length >= 2);
+    if (!pts.length) return false;
+    page.move(r.x + len(pts[0][0], w), r.y + len(pts[0][1], h));
+    for (let i = 1; i < pts.length; i++) page.line(r.x + len(pts[i][0], w), r.y + len(pts[i][1], h));
+    page.close();
+    page.clip();
+    return true;
+  }
+  let cx = w / 2;
+  let cy = h / 2;
+  const am = /at\s+(\S+)(?:\s+(\S+))?/.exec(arg);
+  if (am) {
+    cx = cssPos(am[1], w);
+    cy = cssPos(am[2] || 'center', h);
+  }
+  let body = arg;
+  if (am) body = arg.replace(/at\s+\S+(\s+\S+)?/, '').trim();
+  let rx;
+  let ry;
+  if (kind === 'circle') {
+    let rr = body.split(/\s+/)[0] || 'closest-side';
+    if (rr === 'closest-side' || rr === 'farthest-side') {
+      const near = Math.min(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy));
+      const far = Math.max(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy));
+      rx = ry = rr === 'closest-side' ? near : far;
+    } else {
+      rx = ry = String(rr).endsWith('%') ? (Math.sqrt(w * w + h * h) / Math.SQRT2) * (parseFloat(rr) / 100) : parseFloat(rr) || 0;
+    }
+  } else {
+    const vals = body.split(/\s+/).filter(Boolean);
+    const calc = (s, ref) => s === 'closest-side' ? Math.min(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy)) : s === 'farthest-side' ? Math.max(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy)) : len(s, ref);
+    if (vals.length >= 2) {
+      rx = calc(vals[0], w);
+      ry = calc(vals[1], h);
+    } else if (vals.length === 1) {
+      rx = ry = calc(vals[0], w);
+    } else {
+      rx = ry = calc('closest-side', w);
+    }
+  }
+  if (!(rx > 0) || !(ry > 0)) return false;
+  page.roundRect(r.x + cx - rx, r.y + cy - ry, 2 * rx, 2 * ry, [[ry, ry], [ry, ry], [ry, ry], [ry, ry]]);
+  page.clip();
+  return true;
 }
 
 // ---------- images ----------
@@ -267,7 +351,7 @@ function cssPos(t, total) {
 }
 
 function drawGradient(S, str, x, y, w, h) {
-  const m = /^(repeating-)?(linear|radial)-gradient\(([\s\S]*)\)$/.exec(str);
+  const m = /^(repeating-)?(linear|radial|conic)-gradient\(([\s\S]*)\)$/.exec(str);
   if (!m || (m[1] && m[2] !== 'linear')) return warn('unsupported gradient: ' + str.slice(0, 40));
   const page = S.page;
   const parts = splitTop(m[3]);
@@ -279,6 +363,35 @@ function drawGradient(S, str, x, y, w, h) {
     fn();
     page.restore();
   };
+  if (m[2] === 'conic') {
+    if (typeof CanvasRenderingContext2D === 'undefined' || typeof CanvasRenderingContext2D.prototype.createConicGradient !== 'function') {
+      return warn('conic-gradient needs canvas createConicGradient (modern browser)');
+    }
+    const parts = splitTop(m[3]);
+    let angle = 0;
+    let cx = w / 2;
+    let cy = h / 2;
+    const head = parts[0] || '';
+    const fm = /from\s+(-?[\d.]+(?:deg|rad|turn|grad))/.exec(head);
+    if (fm) {
+      const v = parseFloat(fm[1]);
+      angle = /turn/.test(fm[1]) ? v * 2 * Math.PI : /grad/.test(fm[1]) ? (v * Math.PI) / 200 : /rad/.test(fm[1]) ? v : (v * Math.PI) / 180;
+    }
+    const am = /at\s+(\S+)(?:\s+(\S+))?/.exec(head);
+    if (am) {
+      cx = cssPos(am[1], w);
+      cy = cssPos(am[2] || 'center', h);
+    }
+    if (fm || am) parts.shift();
+    const st = parseStops(parts, 2 * Math.PI);
+    if (st.length < 2) return;
+    rasterGradient(S, x, y, w, h, (g, add) => {
+      g.translate(cx, cy);
+      g.fillStyle = add(g.createConicGradient(angle - Math.PI / 2, 0, 0));
+      g.fillRect(-cx, -cy, w, h);
+    }, st);
+    return;
+  }
   if (m[2] === 'linear') {
     let dx = 0;
     let dy = 1;
@@ -400,7 +513,7 @@ function paintShadows(S, cs, r, rad) {
   if (!v || v === 'none') return;
   const page = S.page;
   for (const sh of splitTop(v).reverse()) {
-    if (/\binset\b/.test(sh)) continue;
+    const inset = /\binset\b/.test(sh);
     const cm = /(rgba?\([^)]*\)|color\([^)]*\)|#[0-9a-f]+)/i.exec(sh);
     const col = parseColor(cm ? cm[1] : cs.color);
     if (!col) continue;
@@ -408,6 +521,28 @@ function paintShadows(S, cs, r, rad) {
     const [ox, oy, bl = 0, sp = 0] = nums.map(parseFloat);
     const N = bl > 0 ? 10 : 1;
     const p = 1 - Math.pow(1 - col.a, 1 / N);
+    if (inset) {
+      // Inset shadow: clip to the box, then fill the ring between the box and a
+      // shrunk hole (shifted by the offset so the shadow gathers on the opposite side).
+      for (let i = 0; i < N; i++) {
+        const e = sp + (bl > 0 ? bl * ((i + 0.5) / N) : 0);
+        const hw = r.w - 2 * e;
+        const hh = r.h - 2 * e;
+        if (hw <= 0 || hh <= 0) continue;
+        const hole = { x: r.x + e + ox, y: r.y + e + oy, w: hw, h: hh };
+        const rr = (rad || [[0, 0], [0, 0], [0, 0], [0, 0]]).map(([a, b]) => [a > 0 ? Math.max(0, a - e) : 0, b > 0 ? Math.max(0, b - e) : 0]);
+        page.save();
+        pathBox(page, r.x, r.y, r.w, r.h, rad);
+        pathBox(page, hole.x, hole.y, hole.w, hole.h, rr);
+        page.clip(true);
+        page.fill(col.c);
+        page.alpha(S.alpha * p);
+        page.rect(-1e5, -1e5, 2e5, 2e5);
+        page.paint('f');
+        page.restore();
+      }
+      continue;
+    }
     page.save();
     page.rect(-1e5, -1e5, 2e5, 2e5);
     pathBox(page, r.x, r.y, r.w, r.h, rad);
@@ -783,7 +918,11 @@ function paintEl(S, el) {
     if (tm) el.style.transform = prevT;
   }
   if (tm && (tm[0] !== 1 || tm[1] !== 0 || tm[2] !== 0 || tm[3] !== 1)) S.nonTrivial = true;
-  const saved = op < 1 || tm;
+  const tag = el.tagName.toLowerCase();
+  const display = cs.display;
+  const inline = display === 'inline';
+  const clip = !inline && cs.clipPath && cs.clipPath !== 'none';
+  const saved = op < 1 || tm || clip;
   if (saved) page.save();
   if (op < 1) S.alpha *= op;
   if (tm) {
@@ -794,9 +933,10 @@ function paintEl(S, el) {
     page.transform(tm[0], tm[1], tm[2], tm[3], tm[4], tm[5]);
     page.transform(1, 0, 0, 1, -px, -py);
   }
-  const tag = el.tagName.toLowerCase();
-  const display = cs.display;
-  const inline = display === 'inline';
+  if (clip) {
+    const cr = { x: rect.left - o.x, y: rect.top - o.y, w: rect.width, h: rect.height };
+    clipPathShape(page, cs, cr);
+  }
   if (display !== 'contents' && cs.visibility === 'visible') {
     const tcs = el.closest && (display.startsWith('table') ? el.closest('table') : null);
     const collapse = !!tcs && getComputedStyle(tcs).borderCollapse === 'collapse' && display !== 'table-column' && display !== 'table-column-group';

@@ -88,7 +88,7 @@ Backgrounds (colour, `url()`, linear/radial/repeating-linear gradients, size, po
 `overflow` clipping, `<img>` (`object-fit`), inline `<svg>`, `<canvas>`, text (weight, size, colour, `letter-spacing`,
 `text-transform`, underline/line-through, `text-shadow`, `-webkit-text-stroke`, `paint-order`), `z-index` order.
 
-Not supported: `::before`/`::after`, list markers, inset shadows, filters, blend modes, `clip-path`, conic gradients.
+Not supported: `::before`/`::after`, list markers, filters, blend modes.
 
 Cross-origin images need CORS headers, otherwise they are skipped with a console warning.
 

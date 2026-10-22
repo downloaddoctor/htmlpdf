@@ -19,7 +19,7 @@ build.js — esbuild bundler → dist/
 
 # MODULES
 src/index.js — htmlToPdf: offscreen host div, font load/auto-discovery, render, PdfDoc.build; downloadPdf/openPdf/printPdf/pdfBlobUrl
-src/paint.js — DOM walker; paints backgrounds, gradients, borders, shadows, images, text, pagination → Page ops; non-mutating box measurement (translate compensated, rotation/scale neutralised temporarily)
+src/paint.js — DOM walker; paints backgrounds, gradients (linear/radial/conic), borders, shadows (outer/inset), clip-path, images, text, pagination → Page ops; non-mutating box measurement (translate compensated, rotation/scale neutralised temporarily)
 src/writer.js — PdfDoc/Page: PDF objects, content stream ops, shading, images, deflate via CompressionStream; Type1 WinAnsi text
 src/fonts.js — registry (TrueType embedder CIDFontType2 Identity-H + ToUnicode), Standard 14 fallback (Helvetica/Times/Courier), @font-face discovery (ttf/data URLs)
 
