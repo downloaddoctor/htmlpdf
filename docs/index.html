@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang='en'>
+
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width,initial-scale=1' />
+  <title>htmlpdf: playground and examples</title>
+  <style>
+    @font-face {
+      font-family: 'Lato';
+      font-weight: 400;
+      src: url('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Regular.ttf');
+    }
+
+    @font-face {
+      font-family: 'Lato';
+      font-weight: 700;
+      src: url('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Bold.ttf');
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      font: 13px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #1a1d29;
+      background: #f5f6f9;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: #3454d1;
+      text-decoration: none;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 18px;
+      background: #fff;
+      border-bottom: 1px solid #e4e6ec;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 15px;
+      margin: 0;
+    }
+
+    header p {
+      margin: 0 auto 0 0;
+      color: #5b6072;
+      font-size: 12px;
+    }
+
+    .steps {
+      display: flex;
+      gap: 8px;
+      padding: 8px 18px;
+      background: #eef1fb;
+      border-bottom: 1px solid #dfe4f5;
+      font-size: 12px;
+      color: #2a44b3;
+      flex-wrap: wrap;
+    }
+
+    .steps b {
+      background: #3454d1;
+      color: #fff;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      margin-right: 5px;
+    }
+
+    .steps span {
+      margin-right: 14px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    #left {
+      width: 46%;
+      min-width: 360px;
+      overflow: auto;
+      padding: 14px 18px 40px;
+      background: #fff;
+      border-right: 1px solid #e4e6ec;
+    }
+
+    #right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    #previewWrap {
+      flex: 1 1 60%;
+      min-height: 0;
+      position: relative;
+    }
+
+    #out {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #e9ebf1;
+    }
+
+    #bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #fff;
+      border-top: 1px solid #e4e6ec;
+      border-bottom: 1px solid #e4e6ec;
+    }
+
+    #status {
+      margin-right: auto;
+      font-size: 11px;
+      color: #5b6072;
+    }
+
+    #status.err {
+      color: #b23434;
+    }
+
+    #codeWrap {
+      flex: 1 1 40%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: #1e2130;
+    }
+
+    #codeHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 12px;
+      color: #aab0c5;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    #code {
+      flex: 1;
+      margin: 0;
+      padding: 4px 14px 12px;
+      overflow: auto;
+      color: #e6e9f5;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre;
+    }
+
+    h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #3454d1;
+      margin: 18px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    h2:first-child {
+      margin-top: 0;
+    }
+
+    h2 b {
+      background: #3454d1;
+      color: #fff;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .card {
+      text-align: left;
+      padding: 8px 10px;
+      border: 1px solid #d4d7e0;
+      border-radius: 8px;
+      background: #fafbfc;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .card:hover {
+      border-color: #3454d1;
+    }
+
+    .card.on {
+      border-color: #3454d1;
+      background: #eef1fb;
+      box-shadow: 0 0 0 1px #3454d1 inset;
+    }
+
+    .card strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .card small {
+      color: #5b6072;
+      font-size: 11px;
+      line-height: 1.3;
+      display: block;
+    }
+
+    #exNote {
+      margin: 8px 0 0;
+      font-size: 12px;
+      color: #5b6072;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #3a3f55;
+    }
+
+    label small {
+      font-weight: 400;
+      color: #8b90a0;
+      font-size: 10.5px;
+      line-height: 1.25;
+    }
+
+    label.check {
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    input[type=number],
+    select,
+    input[type=text] {
+      padding: 5px 8px;
+      border: 1px solid #d4d7e0;
+      border-radius: 5px;
+      font: inherit;
+      width: 100%;
+    }
+
+    input[type=color] {
+      width: 100%;
+      height: 30px;
+      padding: 2px;
+      border: 1px solid #d4d7e0;
+      border-radius: 5px;
+      background: #fff;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid #3454d1;
+      outline-offset: -1px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 260px;
+      border: 1px solid #d4d7e0;
+      border-radius: 6px;
+      padding: 10px;
+      font: 12px/1.5 ui-monospace, Menlo, monospace;
+      resize: vertical;
+    }
+
+    button.btn {
+      padding: 6px 12px;
+      border: 1px solid #d4d7e0;
+      border-radius: 5px;
+      background: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 500;
+    }
+
+    button.btn:hover {
+      background: #f0f1f5;
+    }
+
+    button.btn.primary {
+      background: #3454d1;
+      border-color: #3454d1;
+      color: #fff;
+    }
+
+    button.btn.primary:hover {
+      background: #2a44b3;
+    }
+
+    #copy {
+      padding: 2px 8px;
+      font-size: 11px;
+      background: #2c3047;
+      border-color: #3a3f5c;
+      color: #e6e9f5;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    details {
+      border: 1px solid #e4e6ec;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-top: 8px;
+      background: #fafbfc;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 4px 6px;
+      border-bottom: 1px solid #eceef3;
+      vertical-align: top;
+    }
+
+    code {
+      background: #eef0f6;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 11.5px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+        overflow: auto;
+      }
+
+      #left {
+        width: 100%;
+        min-width: 0;
+      }
+
+      #right {
+        min-height: 700px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>htmlpdf</h1>
+    <p>HTML + CSS in, real vector PDF out. Selectable text, crisp at any zoom. Zero dependencies.</p>
+    <a href='https://github.com/' id='gh'>GitHub</a>
+  </header>
+  <div class='steps'>
+    <span><b>1</b>Pick an example</span>
+    <span><b>2</b>Tweak page options and the HTML</span>
+    <span><b>3</b>See the PDF on the right</span>
+    <span><b>4</b>Copy the code that made it</span>
+  </div>
+
+  <main>
+    <section id='left'>
+      <h2><b>1</b> Example</h2>
+      <div class='cards' id='cards'></div>
+      <p id='exNote'></p>
+
+      <h2><b>2</b> Page options</h2>
+      <div class='grid'>
+        <label>Page size
+          <select id='preset'>
+            <option value='a4'>A4 (210 x 297 mm)</option>
+            <option value='letter'>US Letter (215.9 x 279.4 mm)</option>
+            <option value='a5'>A5 (148 x 210 mm)</option>
+            <option value='receipt'>Receipt (80 mm, height auto)</option>
+            <option value='custom'>Custom</option>
+          </select>
+          <small>Shortcut that fills width and height below.</small>
+        </label>
+        <label>Margin (mm)
+          <input id='margin' type='number' min='0' step='1' value='0' />
+          <small><code>margin</code>: space around the content on every page.</small>
+        </label>
+        <label>Width (mm)
+          <input id='width' type='number' min='10' step='1' value='210' />
+          <small><code>width</code>: page width.</small>
+        </label>
+        <label>Height (mm)
+          <input id='height' type='number' min='0' step='1' value='297' />
+          <small><code>height</code>: page height. <b>0</b> = one page as tall as the content.</small>
+        </label>
+        <label>Background
+          <input id='background' type='color' value='#ffffff' />
+          <small><code>background</code>: page colour.</small>
+        </label>
+        <label>Hairline (mm)
+          <input id='hairline' type='number' min='0' step='0.05' value='0' />
+          <small><code>hairline</code>: draw borders thinner than 1px this wide (0 = keep 1px).</small>
+        </label>
+      </div>
+      <div class='row'>
+        <label class='check'><input type='checkbox' id='noBg' /> No background (transparent page)</label>
+        <label class='check'><input type='checkbox' id='asNode' /> Pass a DOM node instead of an HTML string</label>
+      </div>
+
+      <h2><b>2</b> HTML + CSS (edit me)</h2>
+      <textarea id='src' spellcheck='false'></textarea>
+      <div class='row'>
+        <label class='check'><input type='checkbox' id='auto' checked /> Re-render as I type</label>
+      </div>
+
+      <details>
+        <summary>What does what? (cheat sheet)</summary>
+        <table>
+          <tr>
+            <th>Call</th>
+            <th>Does</th>
+          </tr>
+          <tr>
+            <td><code>htmlToPdf(input, opts)</code></td>
+            <td>Main function. <code>input</code> is an HTML string or a DOM node (cloned). Returns
+              <code>Promise&lt;Uint8Array&gt;</code> with the PDF bytes.
+            </td>
+          </tr>
+          <tr>
+            <td><code>downloadPdf(pdf, name)</code></td>
+            <td>Saves the PDF as a file.</td>
+          </tr>
+          <tr>
+            <td><code>openPdf(pdf)</code></td>
+            <td>Opens it in a new tab.</td>
+          </tr>
+          <tr>
+            <td><code>printPdf(pdf)</code></td>
+            <td>Opens the print dialog through a hidden iframe.</td>
+          </tr>
+          <tr>
+            <td><code>pdfBlobUrl(pdf)</code></td>
+            <td>Gives a <code>blob:</code> URL, for example for an iframe preview (what this page does).</td>
+          </tr>
+          <tr>
+            <td><code>opts.fonts</code></td>
+            <td>The same <code>.ttf</code> files your CSS uses, one entry per weight and style. Required: the PDF embeds
+              these exact fonts.</td>
+          </tr>
+          <tr>
+            <td><code>break-before: page</code></td>
+            <td>CSS that starts a new PDF page. <code>break-inside: avoid</code> keeps a block on one page.</td>
+          </tr>
+          <tr>
+            <td>Not supported</td>
+            <td><code>::before</code>/<code>::after</code>, list markers, inset shadows, filters, blend modes,
+              <code>clip-path</code>, conic gradients.
+            </td>
+          </tr>
+        </table>
+      </details>
+    </section>
+
+    <section id='right'>
+      <div id='previewWrap'><iframe id='out' title='PDF preview'></iframe></div>
+      <div id='bar'>
+        <span id='status'>starting...</span>
+        <button class='btn primary' id='run'>Render</button>
+        <button class='btn' id='download'>Download</button>
+        <button class='btn' id='open'>Open in tab</button>
+        <button class='btn' id='print'>Print</button>
+      </div>
+      <div id='codeWrap'>
+        <div id='codeHead'><span>4. The code that produced this PDF</span><button class='btn' id='copy'>Copy</button>
+        </div>
+        <pre id='code'></pre>
+      </div>
+    </section>
+  </main>
+
+  <script type='module'>
+    import { htmlToPdf, downloadPdf, openPdf, printPdf, pdfBlobUrl } from './dist/htmlpdf.esm.min.js';
+
+    // Your own app supplies its own fonts: the same .ttf files its CSS uses.
+    const FONTS = [
+      { family: 'Lato', weight: 400, url: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Regular.ttf' },
+      { family: 'Lato', weight: 700, url: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Bold.ttf' }
+    ];
+    const $ = (id) => document.getElementById(id);
+    const SIZES = { a4: [210, 297], letter: [215.9, 279.4], a5: [148, 210], receipt: [80, 0] };
+
+    const rows = (n) =>
+      Array.from({ length: n }, (_, i) => `<tr><td style='padding:6px;border:1px solid #d4d7e0'>Service line ${i + 1}</td><td style='padding:6px;border:1px solid #d4d7e0;text-align:right'>$${(i + 1) * 12}.00</td></tr>`).join('');
+
+    const EXAMPLES = [
+      {
+        name: 'Hello',
+        note: 'The smallest possible call: an HTML string, default A4.',
+        opts: { preset: 'a4', margin: 0 },
+        html: `<div style='font-family:Lato;padding:16mm'>
+  <h1 style='margin:0;color:tomato'>Hello PDF</h1>
+  <p>Real <b>selectable</b> vector text, laid out by the browser.</p>
+</div>`
+      },
+      {
+        name: 'Invoice (multi page)',
+        note: 'A long table flows onto more pages. A margin keeps content off the edges.',
+        opts: { preset: 'a4', margin: 12 },
+        html: `<div style='font-family:Lato'>
+  <h2 style='margin:0;color:#3454d1'>Invoice #1042</h2>
+  <p>Billed to <b>Jane Doe</b></p>
+  <table style='border-collapse:collapse;width:100%'>
+    <tr style='background:#f0f1f5'><th style='text-align:left;padding:6px;border:1px solid #d4d7e0'>Item</th><th style='padding:6px;border:1px solid #d4d7e0'>Price</th></tr>
+    ${rows(45)}
+  </table>
+  <p style='text-align:right;font-weight:700;font-size:18px'>Total $12,420.00</p>
+</div>`
+      },
+      {
+        name: 'Receipt (auto height)',
+        note: 'height 0 makes one page exactly as tall as the content. Good for tickets and labels.',
+        opts: { preset: 'receipt', margin: 4 },
+        html: `<div style='font-family:Lato;font-size:12px'>
+  <div style='text-align:center;font-size:16px;font-weight:700'>CAFE LATTE</div>
+  <hr style='border:0;border-top:1px dashed #333' />
+  <div style='display:flex;justify-content:space-between'><span>Latte x2</span><span>7.00</span></div>
+  <div style='display:flex;justify-content:space-between'><span>Cake</span><span>4.50</span></div>
+  <hr style='border:0;border-top:1px dashed #333' />
+  <div style='display:flex;justify-content:space-between;font-weight:700'><span>Total</span><span>11.50</span></div>
+</div>`
+      },
+      {
+        name: 'Styling showcase',
+        note: 'Gradients, radius, shadows, per-side borders, rotation, opacity, text stroke.',
+        opts: { preset: 'a4', margin: 10 },
+        html: `<div style='font-family:Lato;padding:8mm'>
+  <div style='height:60px;border-radius:14px;background:linear-gradient(90deg,#3454d1,#e83e8c);box-shadow:0 6px 14px rgba(0,0,0,.3)'></div>
+  <div style='margin:18px 0;padding:12px;border-left:6px solid tomato;border-bottom:2px dashed #3454d1;background:radial-gradient(circle at 20% 30%,#fff4d6,#ffd6a5)'>Per-side borders on a radial gradient.</div>
+  <div style='display:inline-block;transform:rotate(-6deg);padding:10px 16px;background:#222;color:#fff;border-radius:8px'>Rotated</div>
+  <div style='display:inline-block;opacity:.4;padding:10px 16px;background:#3454d1;color:#fff;border-radius:8px;margin-left:12px'>Opacity .4</div>
+  <p style='font-size:44px;font-weight:700;margin:14px 0;color:transparent;-webkit-text-stroke:1.5px #3454d1'>Outline text</p>
+  <p style='text-decoration:underline;letter-spacing:3px;text-transform:uppercase'>underline, spacing, uppercase</p>
+</div>`
+      },
+      {
+        name: 'Page breaks',
+        note: 'break-before: page starts a new page; break-inside: avoid keeps a block together.',
+        opts: { preset: 'a4', margin: 14 },
+        html: `<div style='font-family:Lato'>
+  <h1 style='margin:0'>Page one</h1>
+  <p>Some content here.</p>
+  <h1 style='break-before:page;margin:0'>Page two</h1>
+  <p>Forced onto its own page by <code>break-before: page</code>.</p>
+  <div style='break-inside:avoid;border:1px solid #333;padding:10px;margin-top:12px'>This box never splits across pages.</div>
+</div>`
+      }
+    ];
+
+    const cards = $('cards');
+    EXAMPLES.forEach((ex, i) => {
+      const b = document.createElement('button');
+      b.className = 'card';
+      b.innerHTML = '<strong></strong><small></small>';
+      b.firstChild.textContent = ex.name;
+      b.lastChild.textContent = ex.note;
+      b.onclick = () => select(i);
+      cards.appendChild(b);
+    });
+
+    function applyPreset() {
+      const s = SIZES[$('preset').value];
+      if (!s) return;
+      $('width').value = s[0];
+      $('height').value = s[1];
+    }
+    function select(i) {
+      const ex = EXAMPLES[i];
+      [...cards.children].forEach((c, k) => c.classList.toggle('on', k === i));
+      $('exNote').textContent = ex.note;
+      $('preset').value = ex.opts.preset;
+      applyPreset();
+      $('margin').value = ex.opts.margin;
+      $('src').value = ex.html;
+      run();
+    }
+
+    function readOpts() {
+      const o = {
+        width: +$('width').value || 210,
+        height: Math.max(0, +$('height').value || 0),
+        margin: Math.max(0, +$('margin').value || 0),
+        background: $('noBg').checked ? null : $('background').value,
+        hairline: Math.max(0, +$('hairline').value || 0)
+      };
+      return o;
+    }
+
+    function codeText(o) {
+      const lines = [];
+      if (o.width !== 210) lines.push(`  width: ${o.width},`);
+      if (o.height !== 297) lines.push(`  height: ${o.height},${o.height === 0 ? ' // 0 = one page as tall as the content' : ''}`);
+      if (o.margin) lines.push(`  margin: ${o.margin},`);
+      if (o.background === null) lines.push('  background: null,');
+      else if (o.background.toLowerCase() !== '#ffffff') lines.push(`  background: '${o.background}',`);
+      if (o.hairline) lines.push(`  hairline: ${o.hairline},`);
+      lines.push('  fonts: [');
+      FONTS.forEach((f) => lines.push(`    { family: '${f.family}', weight: ${f.weight}, url: '${f.url}' },`));
+      lines.push('  ]');
+      const input = $('asNode').checked ? "document.querySelector('#invoice')" : 'html';
+      const head = $('asNode').checked
+        ? '// any element already on your page (it is cloned)'
+        : "const html = '<h1 style=\"font-family:Lato\">Hello</h1>'; // your HTML + CSS string";
+      return `import { htmlToPdf, downloadPdf } from 'htmlpdf';
+
+${head}
+const pdf = await htmlToPdf(${input}, {
+${lines.join('\n')}
+});
+
+downloadPdf(pdf, 'document.pdf'); // or openPdf(pdf) / printPdf(pdf)`;
+    }
+
+    let pdf = null;
+    let url = null;
+    let seq = 0;
+    async function run() {
+      const my = ++seq;
+      const o = readOpts();
+      $('code').textContent = codeText(o);
+      $('status').className = '';
+      $('status').textContent = 'rendering...';
+      let holder = null;
+      try {
+        const t = performance.now();
+        let input = $('src').value;
+        if ($('asNode').checked) {
+          holder = document.createElement('div');
+          holder.style.cssText = 'position:absolute;left:-99999px;top:0';
+          holder.innerHTML = input;
+          document.body.appendChild(holder);
+          input = holder;
+        }
+        const out = await htmlToPdf(input, { ...o, fonts: FONTS });
+        if (my !== seq) return;
+        pdf = out;
+        if (url) URL.revokeObjectURL(url);
+        url = pdfBlobUrl(pdf);
+        $('out').src = url;
+        $('status').textContent = (pdf.length / 1024).toFixed(1) + ' KB, ' + Math.round(performance.now() - t) + ' ms';
+      } catch (err) {
+        $('status').className = 'err';
+        $('status').textContent = 'error: ' + err.message;
+      } finally {
+        if (holder) holder.remove();
+      }
+    }
+
+    let timer = 0;
+    const later = () => {
+      $('code').textContent = codeText(readOpts());
+      if ($('auto').checked) {
+        clearTimeout(timer);
+        timer = setTimeout(run, 600);
+      }
+    };
+    $('src').addEventListener('input', later);
+    ['margin', 'hairline', 'background', 'noBg', 'asNode'].forEach((id) => $(id).addEventListener('input', later));
+    ['width', 'height'].forEach((id) =>
+      $(id).addEventListener('input', () => {
+        $('preset').value = 'custom';
+        later();
+      })
+    );
+    $('preset').onchange = () => {
+      applyPreset();
+      later();
+    };
+    $('run').onclick = run;
+    $('download').onclick = () => pdf && downloadPdf(pdf, 'document.pdf');
+    $('open').onclick = () => pdf && openPdf(pdf);
+    $('print').onclick = () => pdf && printPdf(pdf);
+    $('copy').onclick = async () => {
+      await navigator.clipboard.writeText($('code').textContent);
+      $('copy').textContent = 'Copied';
+      setTimeout(() => ($('copy').textContent = 'Copy'), 1200);
+    };
+
+    select(0);
+  </script>
+</body>
+
+</html>

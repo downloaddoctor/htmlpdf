@@ -1,0 +1,44 @@
+{
+  "name": "htmlpdf",
+  "version": "1.2.0",
+  "packageManager": "pnpm@12.14.0",
+  "description": "HTML + CSS to real vector PDF in the browser. The browser lays out, the PDF embeds real text, borders, gradients and fonts. Zero dependencies, single-file minified build.",
+  "type": "module",
+  "main": "./dist/htmlpdf.esm.min.js",
+  "module": "./dist/htmlpdf.esm.min.js",
+  "exports": {
+    ".": {
+      "import": "./dist/htmlpdf.esm.min.js",
+      "default": "./dist/htmlpdf.esm.min.js"
+    },
+    "./src": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/downloaddoctor/htmlpdf.git"
+  },
+  "homepage": "https://downloaddoctor.github.io/htmlpdf/",
+  "keywords": [
+    "htmlpdf",
+    "pdf",
+    "html-to-pdf",
+    "vector",
+    "browser",
+    "no-dependencies"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "license": "MIT"
+}

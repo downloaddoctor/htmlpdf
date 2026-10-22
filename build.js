@@ -1,0 +1,26 @@
+// Bundles the ES modules into single-file builds in dist/ (ESM + IIFE, minified and readable, with sourcemaps).
+import { build } from 'esbuild';
+import { cpSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const banner = { js: '/*! htmlpdf v' + pkg.version + ' | MIT */' };
+const base = { entryPoints: ['src/index.js'], bundle: true, banner, target: 'es2020', legalComments: 'none', logLevel: 'warning' };
+
+mkdirSync('dist', { recursive: true });
+
+const jobs = [
+  { format: 'esm', outfile: 'dist/htmlpdf.esm.js', minify: false },
+  { format: 'esm', outfile: 'dist/htmlpdf.esm.min.js', minify: true },
+  { format: 'iife', globalName: 'htmlpdf', outfile: 'dist/htmlpdf.js', minify: false },
+  { format: 'iife', globalName: 'htmlpdf', outfile: 'dist/htmlpdf.min.js', minify: true },
+];
+
+for (const j of jobs) {
+  await build({ ...base, ...j, sourcemap: j.minify });
+  const buf = readFileSync(j.outfile);
+  console.log(j.outfile.padEnd(30), String(statSync(j.outfile).size).padStart(8), 'B', String(gzipSync(buf).length).padStart(8), 'B gz');
+}
+
+// docs/ is the Pages site root, so it carries its own copy of the bundles (docs/dist, gitignored).
+cpSync('dist', 'docs/dist', { recursive: true });
