@@ -280,6 +280,177 @@ async function preload(S, host) {
   await Promise.all(tasks);
 }
 
+// ---------- pseudo-elements & list markers ----------
+const BS_CHAR = String.fromCharCode(92);
+
+function listItemNumber(el) {
+  let sib = el.previousElementSibling;
+  let n = 0;
+  while (sib) {
+    if (sib.tagName === 'LI') n++;
+    sib = sib.previousElementSibling;
+  }
+  if (el.parentElement) {
+    const ol = el.parentElement.closest('ol');
+    if (ol) {
+      const start = parseInt(ol.getAttribute('start'), 10);
+      if (Number.isFinite(start)) return start + n;
+    }
+  }
+  return n + 1;
+}
+
+function romanNumeral(num, upper) {
+  const V = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  let s = '';
+  for (const [v, r] of V) {
+    while (num >= v) {
+      s += r;
+      num -= v;
+    }
+  }
+  return upper ? s : s.toLowerCase();
+}
+
+function alphaCounter(n, upper) {
+  let s = '';
+  while (n > 0) {
+    n--;
+    s = String.fromCharCode(97 + (n % 26)) + s;
+    n = Math.floor(n / 26);
+  }
+  return upper ? s.toUpperCase() : s;
+}
+
+function pseudoText(el, which) {
+  const st = getComputedStyle(el, which);
+  if (st.display === 'none') return null;
+  const c = st.content;
+  if (!c || c === 'none' || c === 'normal') return null;
+  const out = [];
+  const isQuote = (ch) => ch === '"' || ch === "'";
+  let i = 0;
+  while (i < c.length) {
+    const ch = c[i];
+    if (isQuote(ch)) {
+      // Quoted string (possibly with backslash escapes).
+      const q = ch;
+      i++;
+      let str = '';
+      while (i < c.length) {
+        const x = c[i];
+        if (x === BS_CHAR && i + 1 < c.length) {
+          str += c[i + 1];
+          i += 2;
+          continue;
+        }
+        if (x === q) {
+          i++;
+          break;
+        }
+        str += x;
+        i++;
+      }
+      out.push(str);
+      continue;
+    }
+    if (c.startsWith('attr(', i)) {
+      const close = c.indexOf(')', i);
+      if (close > 0) {
+        const raw = c.slice(i + 5, close).trim();
+        const name = raw.length >= 2 && (raw[0] === '"' || raw[0] === "'") ? raw.slice(1, -1) : raw;
+        out.push(el.getAttribute(name) || '');
+        i = close + 1;
+        continue;
+      }
+    }
+    if (c.startsWith('url(', i)) {
+      const close = c.indexOf(')', i);
+      if (close > 0) {
+        const raw = c.slice(i + 4, close).trim();
+        const url = raw.length >= 2 && (raw[0] === '"' || raw[0] === "'") ? raw.slice(1, -1) : raw;
+        warn('unsupported pseudo-element url content: ' + url.slice(0, 60));
+        i = close + 1;
+        continue;
+      }
+    }
+    // Plain text run: accumulate until the next special token.
+    let raw = '';
+    while (i < c.length && !(isQuote(c[i]) || c.startsWith('attr(', i) || c.startsWith('url(', i))) {
+      raw += c[i];
+      i++;
+    }
+    const t = raw.trim();
+    if (t.startsWith('counter(') && t.endsWith(')')) out.push(String(listItemNumber(el)));
+    else if (t) out.push(raw);
+  }
+  return out.join('') || null;
+}
+
+const PSEUDO_SKIP = new Set(['TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'COLGROUP', 'IMG', 'CANVAS', 'SVG']);
+
+// Realizes ::before / ::after into actual <span> children of the offscreen clone so
+// the browser lays them out natively and we can measure/paint them like any element.
+function materializePseudos(host) {
+  for (const el of host.querySelectorAll('*')) {
+    if (SKIP.has(el.tagName) || PSEUDO_SKIP.has(el.tagName)) continue;
+    for (const which of ['::before', '::after']) {
+      const text = pseudoText(el, which);
+      if (text == null) continue;
+      const span = document.createElement('span');
+      span.style.cssText = getComputedStyle(el, which).cssText;
+      span.style.content = 'none';
+      span.textContent = text;
+      if (which === '::before') el.insertBefore(span, el.firstChild);
+      else el.appendChild(span);
+    }
+  }
+}
+
+function markerText(el, cs) {
+  const type = cs.listStyleType;
+  if (!type || type === 'none') return null;
+  if (cs.listStyleImage && cs.listStyleImage !== 'none') return null;
+  const n = listItemNumber(el);
+  switch (type) {
+    case 'disc': return '•';
+    case 'circle': return '○';
+    case 'square': return '■';
+    case 'decimal': return String(n);
+    case 'decimal-leading-zero': return String(n).padStart(2, '0');
+    case 'lower-alpha':
+    case 'lower-latin': return alphaCounter(n, false);
+    case 'upper-alpha':
+    case 'upper-latin': return alphaCounter(n, true);
+    case 'lower-roman': return romanNumeral(n, false);
+    case 'upper-roman': return romanNumeral(n, true);
+    default: return '•';
+  }
+}
+
+function paintListMarker(S, el, cs, r) {
+  const txt = markerText(el, cs);
+  if (!txt) return;
+  const ms = getComputedStyle(el, '::marker');
+  const size = parseFloat(ms.fontSize) || parseFloat(cs.fontSize) || 12;
+  const font = pickFont(ms.fontFamily, ms.fontWeight, ms.fontStyle);
+  if (!font) return;
+  const col = parseColor(ms.color) || parseColor(cs.color) || { c: [0, 0, 0], a: 1 };
+  const base = Math.round((font.asc * size) / 1000);
+  const enc = font.encode(txt);
+  let width = enc.width * size;
+  if (!width) width = txt.length * size * 0.55;
+  const padL = parseFloat(cs.paddingLeft) || 0;
+  const x = cs.listStylePosition === 'inside' ? r.x + padL + 2 : r.x - width - 4;
+  const y = r.y + base;
+  const page = S.page;
+  page.save();
+  page.fill(col.c);
+  setA(S, col.a);
+  page.text(font, size, x, y, enc.hex, {});
+  page.restore();
+}
+
 // ---------- gradients ----------
 function parseStops(parts, L) {
   const st = [];
@@ -952,6 +1123,7 @@ function paintEl(S, el) {
       });
       if (flags && flags.skipL) bw[3] = 0;
       if (flags && flags.skipR) bw[1] = 0;
+      if (cs.display === 'list-item') paintListMarker(S, el, cs, r);
       if (!collapse) paintShadows(S, cs, r, rad);
       paintBackground(S, cs, r, rad, collapse ? [0, 0, 0, 0] : bw);
       paintBorders(S, cs, r, rad, collapse, flags);
@@ -1011,6 +1183,7 @@ function paginate(host, contentH) {
 
 export async function render(host, doc, opts) {
   const S = { doc, page: null, o: null, alpha: 1, imgs: new Map(), hair: (opts.hairline || 0) * MM, top: 0, bottom: Infinity, nonTrivial: false };
+  materializePseudos(host);
   await preload(S, host);
   const pw = opts.width * MM;
   const m = (opts.margin || 0) * MM;

@@ -23,6 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "node build.js",
+    "dev": "node build.js --watch --serve",
     "test": "node --test"
   },
   "repository": {

@@ -56,7 +56,7 @@ Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(fam
 
 Backgrounds (colour, `url()`, linear/radial/repeating-linear gradients, size, position, repeat, clip, origin), `border-radius`, per-side borders (solid, dashed, dotted, double, collapsed table borders), outer `box-shadow`, `opacity`, 2D `transform`, `overflow` clipping, `<img>` with `object-fit`, inline `<svg>`, `<canvas>`, text (weight, size, colour, `letter-spacing`, `text-transform`, underline/line-through/overline, `text-shadow`, `-webkit-text-stroke`, `paint-order`), `z-index` order.
 
-Not supported: `::before`/`::after`, list markers, filters, blend modes.
+Not supported: filters, blend modes. (`::before`/`::after` and list markers are now rendered.)
 
 ## Source layout
 

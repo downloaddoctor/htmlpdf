@@ -58,15 +58,15 @@ Set `noAutoFonts: true` to disable discovery. OTF/CFF and `.ttc` are not support
 
 `htmlToPdf(htmlOrNode, opts) -> Promise<Uint8Array>`
 
-| Option            | Default  | Meaning                                                              |
-| ----------------- | -------- | -------------------------------------------------------------------- |
-| `width`, `height` | 210, 297 | Page size in mm. `height: 0` = one page as tall as the content       |
-| `margin`          | 0        | Page margin in mm                                                    |
-| `background`      | `'#fff'` | Page colour, `null` for none                                         |
-| `hairline`        | 0        | Width in mm for borders thinner than 1px (browsers snap them to 1px) |
-| `css`             | `''`     | Extra CSS applied to the content                                     |
+| Option            | Default  | Meaning                                                                       |
+| ----------------- | -------- | ----------------------------------------------------------------------------- |
+| `width`, `height` | 210, 297 | Page size in mm. `height: 0` = one page as tall as the content                |
+| `margin`          | 0        | Page margin in mm                                                             |
+| `background`      | `'#fff'` | Page colour, `null` for none                                                  |
+| `hairline`        | 0        | Width in mm for borders thinner than 1px (browsers snap them to 1px)          |
+| `css`             | `''`     | Extra CSS applied to the content                                              |
 | `fonts`           | `[]`     | `[{ family, weight, style, url }]`; omit for automatic `@font-face` discovery |
-| `noAutoFonts`    | `false`   | Set `true` to skip automatic `@font-face` discovery                    |
+| `noAutoFonts`     | `false`  | Set `true` to skip automatic `@font-face` discovery                           |
 
 Helpers: `downloadPdf(pdf, name)`, `printPdf(pdf)`, `openPdf(pdf)`, `pdfBlobUrl(pdf)`.
 Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(family, url, { weight, style })`.
@@ -88,7 +88,7 @@ Backgrounds (colour, `url()`, linear/radial/repeating-linear gradients, size, po
 `overflow` clipping, `<img>` (`object-fit`), inline `<svg>`, `<canvas>`, text (weight, size, colour, `letter-spacing`,
 `text-transform`, underline/line-through, `text-shadow`, `-webkit-text-stroke`, `paint-order`), `z-index` order.
 
-Not supported: `::before`/`::after`, list markers, filters, blend modes.
+Not supported: filters, blend modes. (`::before`/`::after` — including their CSS inline styles and `attr()` content — and list markers are now rendered.)
 
 Cross-origin images need CORS headers, otherwise they are skipped with a console warning.
 
