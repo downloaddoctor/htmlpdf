@@ -22,16 +22,30 @@ test('PdfDoc builds a structurally valid PDF', async () => {
   const count = Number(lines[1].split(' ')[1]);
   for (let i = 1; i < count; i++) {
     const off = parseInt(lines[2 + i], 10);
-    assert.ok(s.slice(off).startsWith(i + ' 0 obj'), 'xref entry ' + i + ' points at its object');
+    assert.ok(
+      s.slice(off).startsWith(i + ' 0 obj'),
+      'xref entry ' + i + ' points at its object'
+    );
   }
 });
 
 test('shadings and images with alpha are written', async () => {
   const doc = new PdfDoc();
   const page = doc.addPage(200, 200);
-  const sh = doc.addShading({ coords: [0, 0, 100, 0], stops: [{ o: 0, c: [1, 0, 0] }, { o: 1, c: [0, 0, 1] }] });
+  const sh = doc.addShading({
+    coords: [0, 0, 100, 0],
+    stops: [
+      { o: 0, c: [1, 0, 0] },
+      { o: 1, c: [0, 0, 1] }
+    ]
+  });
   page.shading(sh);
-  const img = doc.addImage({ w: 2, h: 2, rgb: new Uint8Array(12), alpha: new Uint8Array(4) });
+  const img = doc.addImage({
+    w: 2,
+    h: 2,
+    rgb: new Uint8Array(12),
+    alpha: new Uint8Array(4)
+  });
   page.image(img, 0, 0, 10, 10);
   const s = latin1(await doc.build());
   assert.match(s, /\/ShadingType 2/);
@@ -39,7 +53,10 @@ test('shadings and images with alpha are written', async () => {
 });
 
 test('registerFont rejects unusable font data', () => {
-  assert.throws(() => registerFont({ family: 'x', data: new ArrayBuffer(4) }), /invalid font data/);
+  assert.throws(
+    () => registerFont({ family: 'x', data: new ArrayBuffer(4) }),
+    /invalid font data/
+  );
   const otf = new ArrayBuffer(64);
   new DataView(otf).setUint32(0, 0x4f54544f);
   assert.throws(() => registerFont({ family: 'x', data: otf }), /\.otf/);

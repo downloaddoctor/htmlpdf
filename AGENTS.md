@@ -21,14 +21,14 @@ build.js — esbuild bundler → dist/
 src/index.js — htmlToPdf: offscreen host div, font load/auto-discovery, render, PdfDoc.build; downloadPdf/openPdf/printPdf/pdfBlobUrl
 src/paint.js — DOM walker; paints backgrounds, gradients (linear/radial/conic), borders, shadows (outer/inset), clip-path, pseudo-elements/::after materialised as spans, list markers, images, text, pagination → Page ops; non-mutating box measurement (translate compensated, rotation/scale neutralised temporarily)
 src/writer.js — PdfDoc/Page: PDF objects, content stream ops, shading, images, deflate via CompressionStream; Type1 WinAnsi text
-src/fonts.js — registry (TrueType embedder CIDFontType2 Identity-H + ToUnicode), Standard 14 fallback (Helvetica/Times/Courier), @font-face discovery (ttf/data URLs)
+src/fonts.js — registry (TrueType embedder CIDFontType2 Identity-H + ToUnicode), glyph subsetter (keeps used glyphs + composite deps; only head/hhea/maxp/hmtx/loca/glyf emitted), Standard 14 fallback (Helvetica/Times/Courier), @font-face discovery (ttf/data URLs)
 
 # ARCHITECTURE
 src/index.js → src/paint.js (render, MM) → src/fonts.js (pickFont)
 src/index.js → src/writer.js (PdfDoc)
 src/index.js → src/fonts.js (registerFont, hasFonts)
 units: CSS px, y down; writer base matrix flips to PDF space (K=0.75)
-pagination: paginate() pushes margin-top for break-before/break-inside; page i clips window i*contentH
+pagination: paginate() pushes margin-top for break-before/break-inside (forces the whole first line past the boundary via line-height); page i clips window i*contentH
 text: per-char Range rects → words; fallback to per-char positioning when predicted width differs >0.35px
 images/svg/canvas rasterised via canvas → RGB + SMask
 gradients: opaque → PDF shading; translucent → rasterised
@@ -52,3 +52,5 @@ pnpm test → node --test over test/*.test.js (no browser: PdfDoc xref/structure
 # INVARIANTS
 no runtime dependencies
 no build step required for source consumption
+pickFont never returns null — std-14 fallback always yields a font
+deflate() reads cs.readable concurrently with the write — awaiting write first deadlocks on backpressure; any stream error returns null (uncompressed fallback)

@@ -3,21 +3,47 @@
 //   --watch  rebuild when src/ or site/ change
 //   --serve  serve dist/ at http://localhost:3000 (used by `pnpm dev`)
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, readFileSync, rmSync, statSync, watch } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watch
+} from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const pkg = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8')
+);
 const banner = { js: '/*! htmlpdf v' + pkg.version + ' | MIT */' };
-const base = { entryPoints: ['src/index.js'], bundle: true, banner, target: 'es2020', legalComments: 'none', logLevel: 'warning' };
+const base = {
+  entryPoints: ['src/index.js'],
+  bundle: true,
+  banner,
+  target: 'es2020',
+  legalComments: 'none',
+  logLevel: 'warning'
+};
 
 const jobs = [
   { format: 'esm', outfile: 'dist/htmlpdf.esm.js', minify: false },
   { format: 'esm', outfile: 'dist/htmlpdf.esm.min.js', minify: true },
-  { format: 'iife', globalName: 'htmlpdf', outfile: 'dist/htmlpdf.js', minify: false },
-  { format: 'iife', globalName: 'htmlpdf', outfile: 'dist/htmlpdf.min.js', minify: true },
+  {
+    format: 'iife',
+    globalName: 'htmlpdf',
+    outfile: 'dist/htmlpdf.js',
+    minify: false
+  },
+  {
+    format: 'iife',
+    globalName: 'htmlpdf',
+    outfile: 'dist/htmlpdf.min.js',
+    minify: true
+  }
 ];
 
 async function doBuild() {
@@ -26,7 +52,13 @@ async function doBuild() {
   for (const j of jobs) {
     await build({ ...base, ...j, sourcemap: j.minify });
     const buf = readFileSync(j.outfile);
-    console.log(j.outfile.padEnd(30), String(statSync(j.outfile).size).padStart(8), 'B', String(gzipSync(buf).length).padStart(8), 'B gz');
+    console.log(
+      j.outfile.padEnd(30),
+      String(statSync(j.outfile).size).padStart(8),
+      'B',
+      String(gzipSync(buf).length).padStart(8),
+      'B gz'
+    );
   }
   cpSync('site', 'dist', { recursive: true });
   console.log('built dist/');
@@ -78,12 +110,14 @@ if (serveMode) {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.gif': 'image/gif',
-    '.ico': 'image/x-icon',
+    '.ico': 'image/x-icon'
   };
   const root = resolve('dist');
   const server = createServer(async (req, res) => {
     try {
-      let pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+      let pathname = decodeURIComponent(
+        new URL(req.url, 'http://localhost').pathname
+      );
       if (pathname === '/') pathname = '/index.html';
       const file = resolve(root, '.' + pathname);
       if (file !== root && !file.startsWith(root + sep)) {
@@ -92,12 +126,16 @@ if (serveMode) {
         return;
       }
       const data = await readFile(file);
-      res.writeHead(200, { 'content-type': mime[extname(file)] || 'application/octet-stream' });
+      res.writeHead(200, {
+        'content-type': mime[extname(file)] || 'application/octet-stream'
+      });
       res.end(data);
     } catch (err) {
       res.writeHead(404);
       res.end('Not found');
     }
   });
-  server.listen(3000, () => console.log('serving dist/ at http://localhost:3000'));
+  server.listen(3000, () =>
+    console.log('serving dist/ at http://localhost:3000')
+  );
 }

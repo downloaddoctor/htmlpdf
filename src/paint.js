@@ -5,12 +5,21 @@
 // transform (2D matrix), overflow clip, clip-path (inset/circle/ellipse/polygon), img (object-fit/position),
 // inline svg and canvas (rasterised), text (font weight/size/color, letter-spacing, text-transform, underline/line-through/overline,
 // text-shadow, text-stroke + paint-order), z-index order, multi-page with break-before / break-inside.
-// Not covered: pseudo-elements, list markers, filters, blend modes.
+// Not covered: filters, blend modes.
 
 import { pickFont } from './fonts.js';
 
 export const MM = 96 / 25.4;
-const SKIP = new Set(['SCRIPT', 'STYLE', 'HEAD', 'META', 'LINK', 'TEMPLATE', 'NOSCRIPT', 'TITLE']);
+const SKIP = new Set([
+  'SCRIPT',
+  'STYLE',
+  'HEAD',
+  'META',
+  'LINK',
+  'TEMPLATE',
+  'NOSCRIPT',
+  'TITLE'
+]);
 
 function warn(msg) {
   console.warn('[htmlpdf] ' + msg);
@@ -35,7 +44,10 @@ function splitTop(s, sep = ',') {
 let _cx = null;
 function parseColor(s) {
   if (!s || s === 'transparent' || s === 'none') return null;
-  const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+)(%?))?\s*\)$/.exec(s);
+  const m =
+    /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+)(%?))?\s*\)$/.exec(
+      s
+    );
   let r, g, b, a;
   if (m) {
     r = +m[1];
@@ -43,7 +55,11 @@ function parseColor(s) {
     b = +m[3];
     a = m[4] == null ? 1 : m[5] ? +m[4] / 100 : +m[4];
   } else {
-    _cx = _cx || document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    _cx =
+      _cx ||
+      document
+        .createElement('canvas')
+        .getContext('2d', { willReadFrequently: true });
     _cx.canvas.width = 1;
     _cx.fillStyle = s;
     _cx.fillRect(0, 0, 1, 1);
@@ -57,8 +73,12 @@ function parseColor(s) {
   return { c: [r / 255, g / 255, b / 255], a };
 }
 
-const toLen = (s, ref) => (String(s).endsWith('%') ? (parseFloat(s) * ref) / 100 : parseFloat(s) || 0);
-const posVal = (s, total, t) => (String(s).endsWith('%') ? ((total - t) * parseFloat(s)) / 100 : parseFloat(s) || 0);
+const toLen = (s, ref) =>
+  String(s).endsWith('%') ? (parseFloat(s) * ref) / 100 : parseFloat(s) || 0;
+const posVal = (s, total, t) =>
+  String(s).endsWith('%')
+    ? ((total - t) * parseFloat(s)) / 100
+    : parseFloat(s) || 0;
 const setA = (S, a) => S.page.alpha(S.alpha * a);
 const adj = (S, px) => (px > 0 && px <= 1.0001 && S.hair ? S.hair : px);
 
@@ -79,7 +99,13 @@ function radiiOf(cs, w, h) {
     return [toLen(v[0], w), toLen(v[1] || v[0], h)];
   });
   const lim = (len, a, b) => (a + b > 0 ? len / (a + b) : 1);
-  const f = Math.min(1, lim(w, r[0][0], r[1][0]), lim(w, r[3][0], r[2][0]), lim(h, r[0][1], r[3][1]), lim(h, r[1][1], r[2][1]));
+  const f = Math.min(
+    1,
+    lim(w, r[0][0], r[1][0]),
+    lim(w, r[3][0], r[2][0]),
+    lim(h, r[0][1], r[3][1]),
+    lim(h, r[1][1], r[2][1])
+  );
   return f < 1 ? r.map(([a, b]) => [a * f, b * f]) : r;
 }
 const hasRad = (rad) => rad && rad.some((r) => r[0] > 0 && r[1] > 0);
@@ -89,7 +115,7 @@ function insetRad(rad, t, r, b, l) {
     [m(rad[0][0] - l), m(rad[0][1] - t)],
     [m(rad[1][0] - r), m(rad[1][1] - t)],
     [m(rad[2][0] - r), m(rad[2][1] - b)],
-    [m(rad[3][0] - l), m(rad[3][1] - b)],
+    [m(rad[3][0] - l), m(rad[3][1] - b)]
   ];
 }
 function pathBox(page, x, y, w, h, rad) {
@@ -110,7 +136,8 @@ function clipPathShape(page, cs, r) {
   const arg = m[2].trim();
   const w = r.w;
   const h = r.h;
-  const len = (s, ref) => (String(s).endsWith('%') ? (parseFloat(s) * ref) / 100 : parseFloat(s) || 0);
+  const len = (s, ref) =>
+    String(s).endsWith('%') ? (parseFloat(s) * ref) / 100 : parseFloat(s) || 0;
   if (kind === 'inset') {
     const rm = /^([\s\S]*?)(?:\s+round\s+([\s\S]*))?$/.exec(arg);
     const sides = rm[1].split(/\s+/).filter(Boolean);
@@ -120,12 +147,18 @@ function clipPathShape(page, cs, r) {
     const b = len(sides[2] || sides[0], h);
     const l = len(sides[3] || sides[1] || sides[0], w);
     if (rm[2]) {
-      const rv = rm[2].split(/\s+/).filter(Boolean).map((s) => len(s, w));
+      const rv = rm[2]
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((s) => len(s, w));
       const R = [
         [rv[0], rv[1] || rv[0]],
         [rv[2] || rv[0], rv[3] || rv[1] || rv[0]],
         [rv[4] || rv[2] || rv[0], rv[5] || rv[3] || rv[1] || rv[0]],
-        [rv[6] || rv[4] || rv[2] || rv[0], rv[7] || rv[5] || rv[3] || rv[1] || rv[0]],
+        [
+          rv[6] || rv[4] || rv[2] || rv[0],
+          rv[7] || rv[5] || rv[3] || rv[1] || rv[0]
+        ]
       ];
       page.roundRect(r.x + l, r.y + t, w - l - ri, h - t - b, R);
     } else {
@@ -135,10 +168,14 @@ function clipPathShape(page, cs, r) {
     return true;
   }
   if (kind === 'polygon') {
-    const pts = arg.split(',').map((p) => p.trim().split(/\s+/).filter(Boolean)).filter((p) => p.length >= 2);
+    const pts = arg
+      .split(',')
+      .map((p) => p.trim().split(/\s+/).filter(Boolean))
+      .filter((p) => p.length >= 2);
     if (!pts.length) return false;
     page.move(r.x + len(pts[0][0], w), r.y + len(pts[0][1], h));
-    for (let i = 1; i < pts.length; i++) page.line(r.x + len(pts[i][0], w), r.y + len(pts[i][1], h));
+    for (let i = 1; i < pts.length; i++)
+      page.line(r.x + len(pts[i][0], w), r.y + len(pts[i][1], h));
     page.close();
     page.clip();
     return true;
@@ -157,15 +194,42 @@ function clipPathShape(page, cs, r) {
   if (kind === 'circle') {
     let rr = body.split(/\s+/)[0] || 'closest-side';
     if (rr === 'closest-side' || rr === 'farthest-side') {
-      const near = Math.min(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy));
-      const far = Math.max(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy));
+      const near = Math.min(
+        Math.abs(cx),
+        Math.abs(w - cx),
+        Math.abs(cy),
+        Math.abs(h - cy)
+      );
+      const far = Math.max(
+        Math.abs(cx),
+        Math.abs(w - cx),
+        Math.abs(cy),
+        Math.abs(h - cy)
+      );
       rx = ry = rr === 'closest-side' ? near : far;
     } else {
-      rx = ry = String(rr).endsWith('%') ? (Math.sqrt(w * w + h * h) / Math.SQRT2) * (parseFloat(rr) / 100) : parseFloat(rr) || 0;
+      rx = ry = String(rr).endsWith('%')
+        ? (Math.sqrt(w * w + h * h) / Math.SQRT2) * (parseFloat(rr) / 100)
+        : parseFloat(rr) || 0;
     }
   } else {
     const vals = body.split(/\s+/).filter(Boolean);
-    const calc = (s, ref) => s === 'closest-side' ? Math.min(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy)) : s === 'farthest-side' ? Math.max(Math.abs(cx), Math.abs(w - cx), Math.abs(cy), Math.abs(h - cy)) : len(s, ref);
+    const calc = (s, ref) =>
+      s === 'closest-side'
+        ? Math.min(
+          Math.abs(cx),
+          Math.abs(w - cx),
+          Math.abs(cy),
+          Math.abs(h - cy)
+        )
+        : s === 'farthest-side'
+          ? Math.max(
+            Math.abs(cx),
+            Math.abs(w - cx),
+            Math.abs(cy),
+            Math.abs(h - cy)
+          )
+          : len(s, ref);
     if (vals.length >= 2) {
       rx = calc(vals[0], w);
       ry = calc(vals[1], h);
@@ -176,7 +240,12 @@ function clipPathShape(page, cs, r) {
     }
   }
   if (!(rx > 0) || !(ry > 0)) return false;
-  page.roundRect(r.x + cx - rx, r.y + cy - ry, 2 * rx, 2 * ry, [[ry, ry], [ry, ry], [ry, ry], [ry, ry]]);
+  page.roundRect(r.x + cx - rx, r.y + cy - ry, 2 * rx, 2 * ry, [
+    [ry, ry],
+    [ry, ry],
+    [ry, ry],
+    [ry, ry]
+  ]);
   page.clip();
   return true;
 }
@@ -200,7 +269,9 @@ function rasterOf(source, dw, dh) {
     g.drawImage(source, 0, 0, dw, dh);
     return splitRgba(g.getImageData(0, 0, dw, dh).data, dw, dh);
   } catch (err) {
-    warn('image could not be read (cross-origin without CORS?): ' + err.message);
+    warn(
+      'image could not be read (cross-origin without CORS?): ' + err.message
+    );
     return null;
   }
 }
@@ -217,13 +288,17 @@ function splitRgba(d, w, h) {
   }
   return { w, h, rgb, alpha: opaque ? null : alpha };
 }
-const urlsOf = (bg) => [...String(bg || '').matchAll(/url\(\s*(["']?)(.*?)\1\s*\)/g)].map((m) => m[2]);
+const urlsOf = (bg) =>
+  [...String(bg || '').matchAll(/url\(\s*(["']?)(.*?)\1\s*\)/g)].map(
+    (m) => m[2]
+  );
 
 async function preload(S, host) {
   const tasks = [];
   const els = [host, ...host.querySelectorAll('*')];
   for (const el of els) {
-    if (el !== host && el.parentElement && el.parentElement.closest('svg')) continue;
+    if (el !== host && el.parentElement && el.parentElement.closest('svg'))
+      continue;
     const cs = getComputedStyle(el);
     if (cs.display === 'none') continue;
     const tag = el.tagName.toLowerCase();
@@ -236,9 +311,21 @@ async function preload(S, host) {
             /* broken image */
           }
           if (!el.naturalWidth) return;
-          const k = Math.min(1, 4000 / Math.max(el.naturalWidth, el.naturalHeight));
-          const r = rasterOf(el, Math.round(el.naturalWidth * k), Math.round(el.naturalHeight * k));
-          if (r) S.imgs.set(el, { ...S.doc.addImage(r), w: el.naturalWidth, h: el.naturalHeight });
+          const k = Math.min(
+            1,
+            4000 / Math.max(el.naturalWidth, el.naturalHeight)
+          );
+          const r = rasterOf(
+            el,
+            Math.round(el.naturalWidth * k),
+            Math.round(el.naturalHeight * k)
+          );
+          if (r)
+            S.imgs.set(el, {
+              ...S.doc.addImage(r),
+              w: el.naturalWidth,
+              h: el.naturalHeight
+            });
         })()
       );
     } else if (tag === 'svg') {
@@ -251,17 +338,26 @@ async function preload(S, host) {
           c.setAttribute('width', b.width);
           c.setAttribute('height', b.height);
           c.style.color = cs.color;
-          const im = await loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c)));
+          const im = await loadImage(
+            'data:image/svg+xml;charset=utf-8,' +
+            encodeURIComponent(new XMLSerializer().serializeToString(c))
+          );
           if (!im) return;
           const k = 3;
-          const r = rasterOf(im, Math.round(b.width * k), Math.round(b.height * k));
-          if (r) S.imgs.set(el, { ...S.doc.addImage(r), w: b.width, h: b.height });
+          const r = rasterOf(
+            im,
+            Math.round(b.width * k),
+            Math.round(b.height * k)
+          );
+          if (r)
+            S.imgs.set(el, { ...S.doc.addImage(r), w: b.width, h: b.height });
         })()
       );
     } else if (tag === 'canvas') {
       if (el.width && el.height) {
         const r = rasterOf(el, el.width, el.height);
-        if (r) S.imgs.set(el, { ...S.doc.addImage(r), w: el.width, h: el.height });
+        if (r)
+          S.imgs.set(el, { ...S.doc.addImage(r), w: el.width, h: el.height });
       }
     }
     for (const u of urlsOf(cs.backgroundImage)) {
@@ -270,9 +366,15 @@ async function preload(S, host) {
       tasks.push(
         (async () => {
           const im = await loadImage(u);
-          if (!im) return warn('background image failed to load: ' + u.slice(0, 80));
+          if (!im)
+            return warn('background image failed to load: ' + u.slice(0, 80));
           const r = rasterOf(im, im.naturalWidth || 1, im.naturalHeight || 1);
-          if (r) S.imgs.set(u, { ...S.doc.addImage(r), w: im.naturalWidth || 1, h: im.naturalHeight || 1 });
+          if (r)
+            S.imgs.set(u, {
+              ...S.doc.addImage(r),
+              w: im.naturalWidth || 1,
+              h: im.naturalHeight || 1
+            });
         })()
       );
     }
@@ -301,7 +403,21 @@ function listItemNumber(el) {
 }
 
 function romanNumeral(num, upper) {
-  const V = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  const V = [
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I']
+  ];
   let s = '';
   for (const [v, r] of V) {
     while (num >= v) {
@@ -358,7 +474,10 @@ function pseudoText(el, which) {
       const close = c.indexOf(')', i);
       if (close > 0) {
         const raw = c.slice(i + 5, close).trim();
-        const name = raw.length >= 2 && (raw[0] === '"' || raw[0] === "'") ? raw.slice(1, -1) : raw;
+        const name =
+          raw.length >= 2 && (raw[0] === '"' || raw[0] === "'")
+            ? raw.slice(1, -1)
+            : raw;
         out.push(el.getAttribute(name) || '');
         i = close + 1;
         continue;
@@ -368,7 +487,10 @@ function pseudoText(el, which) {
       const close = c.indexOf(')', i);
       if (close > 0) {
         const raw = c.slice(i + 4, close).trim();
-        const url = raw.length >= 2 && (raw[0] === '"' || raw[0] === "'") ? raw.slice(1, -1) : raw;
+        const url =
+          raw.length >= 2 && (raw[0] === '"' || raw[0] === "'")
+            ? raw.slice(1, -1)
+            : raw;
         warn('unsupported pseudo-element url content: ' + url.slice(0, 60));
         i = close + 1;
         continue;
@@ -376,18 +498,32 @@ function pseudoText(el, which) {
     }
     // Plain text run: accumulate until the next special token.
     let raw = '';
-    while (i < c.length && !(isQuote(c[i]) || c.startsWith('attr(', i) || c.startsWith('url(', i))) {
+    while (
+      i < c.length &&
+      !(isQuote(c[i]) || c.startsWith('attr(', i) || c.startsWith('url(', i))
+    ) {
       raw += c[i];
       i++;
     }
     const t = raw.trim();
-    if (t.startsWith('counter(') && t.endsWith(')')) out.push(String(listItemNumber(el)));
+    if (t.startsWith('counter(') && t.endsWith(')'))
+      out.push(String(listItemNumber(el)));
     else if (t) out.push(raw);
   }
   return out.join('') || null;
 }
 
-const PSEUDO_SKIP = new Set(['TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'COLGROUP', 'IMG', 'CANVAS', 'SVG']);
+const PSEUDO_SKIP = new Set([
+  'TABLE',
+  'THEAD',
+  'TBODY',
+  'TFOOT',
+  'TR',
+  'COLGROUP',
+  'IMG',
+  'CANVAS',
+  'SVG'
+]);
 
 // Realizes ::before / ::after into actual <span> children of the offscreen clone so
 // the browser lays them out natively and we can measure/paint them like any element.
@@ -413,18 +549,28 @@ function markerText(el, cs) {
   if (cs.listStyleImage && cs.listStyleImage !== 'none') return null;
   const n = listItemNumber(el);
   switch (type) {
-    case 'disc': return '•';
-    case 'circle': return '○';
-    case 'square': return '■';
-    case 'decimal': return String(n);
-    case 'decimal-leading-zero': return String(n).padStart(2, '0');
+    case 'disc':
+      return '•';
+    case 'circle':
+      return '○';
+    case 'square':
+      return '■';
+    case 'decimal':
+      return String(n);
+    case 'decimal-leading-zero':
+      return String(n).padStart(2, '0');
     case 'lower-alpha':
-    case 'lower-latin': return alphaCounter(n, false);
+    case 'lower-latin':
+      return alphaCounter(n, false);
     case 'upper-alpha':
-    case 'upper-latin': return alphaCounter(n, true);
-    case 'lower-roman': return romanNumeral(n, false);
-    case 'upper-roman': return romanNumeral(n, true);
-    default: return '•';
+    case 'upper-latin':
+      return alphaCounter(n, true);
+    case 'lower-roman':
+      return romanNumeral(n, false);
+    case 'upper-roman':
+      return romanNumeral(n, true);
+    default:
+      return '•';
   }
 }
 
@@ -435,13 +581,15 @@ function paintListMarker(S, el, cs, r) {
   const size = parseFloat(ms.fontSize) || parseFloat(cs.fontSize) || 12;
   const font = pickFont(ms.fontFamily, ms.fontWeight, ms.fontStyle);
   if (!font) return;
-  const col = parseColor(ms.color) || parseColor(cs.color) || { c: [0, 0, 0], a: 1 };
+  const col = parseColor(ms.color) ||
+    parseColor(cs.color) || { c: [0, 0, 0], a: 1 };
   const base = Math.round((font.asc * size) / 1000);
   const enc = font.encode(txt);
   let width = enc.width * size;
   if (!width) width = txt.length * size * 0.55;
   const padL = parseFloat(cs.paddingLeft) || 0;
-  const x = cs.listStylePosition === 'inside' ? r.x + padL + 2 : r.x - width - 4;
+  const x =
+    cs.listStylePosition === 'inside' ? r.x + padL + 2 : r.x - width - 4;
   const y = r.y + base;
   const page = S.page;
   page.save();
@@ -455,7 +603,10 @@ function paintListMarker(S, el, cs, r) {
 function parseStops(parts, L) {
   const st = [];
   for (const p of parts) {
-    const m = /^((?:rgba?|color|hsla?|hwb|lab|lch|oklab|oklch)\([^)]*\)|[#\w-]+)\s*(.*)$/.exec(p);
+    const m =
+      /^((?:rgba?|color|hsla?|hwb|lab|lch|oklab|oklch)\([^)]*\)|[#\w-]+)\s*(.*)$/.exec(
+        p
+      );
     if (!m) continue;
     const col = parseColor(m[1]) || { c: [0, 0, 0], a: 0 };
     const pos = m[2]
@@ -476,13 +627,19 @@ function parseStops(parts, L) {
     while (st[j].o == null) j++;
     const a = st[i - 1].o;
     const b = st[j].o;
-    for (let k = i; k < j; k++) st[k].o = a + ((b - a) * (k - i + 1)) / (j - i + 1);
+    for (let k = i; k < j; k++)
+      st[k].o = a + ((b - a) * (k - i + 1)) / (j - i + 1);
     i = j;
   }
   // transparent stops take the colour of a neighbour (CSS interpolates premultiplied)
   for (let i = 0; i < st.length; i++) {
     if (st[i].col.a > 0) continue;
-    const n = st[i + 1] && st[i + 1].col.a > 0 ? st[i + 1] : st[i - 1] && st[i - 1].col.a > 0 ? st[i - 1] : null;
+    const n =
+      st[i + 1] && st[i + 1].col.a > 0
+        ? st[i + 1]
+        : st[i - 1] && st[i - 1].col.a > 0
+          ? st[i - 1]
+          : null;
     if (n) st[i] = { o: st[i].o, col: { c: n.col.c, a: 0 } };
   }
   return st;
@@ -492,7 +649,8 @@ function vectorStops(st) {
   const out = st.map((s) => ({ o: Math.min(1, Math.max(0, s.o)), c: s.col.c }));
   if (out[0].o > 0) out.unshift({ o: 0, c: out[0].c });
   if (out[out.length - 1].o < 1) out.push({ o: 1, c: out[out.length - 1].c });
-  for (let i = 1; i < out.length; i++) if (out[i].o <= out[i - 1].o) out[i].o = Math.min(1, out[i - 1].o + 0.0001);
+  for (let i = 1; i < out.length; i++)
+    if (out[i].o <= out[i - 1].o) out[i].o = Math.min(1, out[i - 1].o + 0.0001);
   return out;
 }
 
@@ -506,10 +664,16 @@ function rasterGradient(S, x, y, w, h, draw, st) {
   const g = c.getContext('2d', { willReadFrequently: true });
   g.scale(s, s);
   draw(g, (gr) => {
-    for (const t of st) gr.addColorStop(Math.min(1, Math.max(0, t.o)), `rgba(${Math.round(t.col.c[0] * 255)},${Math.round(t.col.c[1] * 255)},${Math.round(t.col.c[2] * 255)},${t.col.a})`);
+    for (const t of st)
+      gr.addColorStop(
+        Math.min(1, Math.max(0, t.o)),
+        `rgba(${Math.round(t.col.c[0] * 255)},${Math.round(t.col.c[1] * 255)},${Math.round(t.col.c[2] * 255)},${t.col.a})`
+      );
     return gr;
   });
-  const rec = S.doc.addImage(splitRgba(g.getImageData(0, 0, cw, ch).data, cw, ch));
+  const rec = S.doc.addImage(
+    splitRgba(g.getImageData(0, 0, cw, ch).data, cw, ch)
+  );
   setA(S, 1);
   S.page.image(rec, x, y, w, h);
 }
@@ -522,8 +686,11 @@ function cssPos(t, total) {
 }
 
 function drawGradient(S, str, x, y, w, h) {
-  const m = /^(repeating-)?(linear|radial|conic)-gradient\(([\s\S]*)\)$/.exec(str);
-  if (!m || (m[1] && m[2] !== 'linear')) return warn('unsupported gradient: ' + str.slice(0, 40));
+  const m = /^(repeating-)?(linear|radial|conic)-gradient\(([\s\S]*)\)$/.exec(
+    str
+  );
+  if (!m || (m[1] && m[2] !== 'linear'))
+    return warn('unsupported gradient: ' + str.slice(0, 40));
   const page = S.page;
   const parts = splitTop(m[3]);
   const tile = (fn) => {
@@ -535,8 +702,14 @@ function drawGradient(S, str, x, y, w, h) {
     page.restore();
   };
   if (m[2] === 'conic') {
-    if (typeof CanvasRenderingContext2D === 'undefined' || typeof CanvasRenderingContext2D.prototype.createConicGradient !== 'function') {
-      return warn('conic-gradient needs canvas createConicGradient (modern browser)');
+    if (
+      typeof CanvasRenderingContext2D === 'undefined' ||
+      typeof CanvasRenderingContext2D.prototype.createConicGradient !==
+      'function'
+    ) {
+      return warn(
+        'conic-gradient needs canvas createConicGradient (modern browser)'
+      );
     }
     const parts = splitTop(m[3]);
     let angle = 0;
@@ -546,7 +719,13 @@ function drawGradient(S, str, x, y, w, h) {
     const fm = /from\s+(-?[\d.]+(?:deg|rad|turn|grad))/.exec(head);
     if (fm) {
       const v = parseFloat(fm[1]);
-      angle = /turn/.test(fm[1]) ? v * 2 * Math.PI : /grad/.test(fm[1]) ? (v * Math.PI) / 200 : /rad/.test(fm[1]) ? v : (v * Math.PI) / 180;
+      angle = /turn/.test(fm[1])
+        ? v * 2 * Math.PI
+        : /grad/.test(fm[1])
+          ? (v * Math.PI) / 200
+          : /rad/.test(fm[1])
+            ? v
+            : (v * Math.PI) / 180;
     }
     const am = /at\s+(\S+)(?:\s+(\S+))?/.exec(head);
     if (am) {
@@ -556,11 +735,19 @@ function drawGradient(S, str, x, y, w, h) {
     if (fm || am) parts.shift();
     const st = parseStops(parts, 2 * Math.PI);
     if (st.length < 2) return;
-    rasterGradient(S, x, y, w, h, (g, add) => {
-      g.translate(cx, cy);
-      g.fillStyle = add(g.createConicGradient(angle - Math.PI / 2, 0, 0));
-      g.fillRect(-cx, -cy, w, h);
-    }, st);
+    rasterGradient(
+      S,
+      x,
+      y,
+      w,
+      h,
+      (g, add) => {
+        g.translate(cx, cy);
+        g.fillStyle = add(g.createConicGradient(angle - Math.PI / 2, 0, 0));
+        g.fillRect(-cx, -cy, w, h);
+      },
+      st
+    );
     return;
   }
   if (m[2] === 'linear') {
@@ -581,7 +768,13 @@ function drawGradient(S, str, x, y, w, h) {
         }
       } else {
         const v = parseFloat(a);
-        const rad = /turn/.test(a) ? v * 2 * Math.PI : /grad/.test(a) ? (v * Math.PI) / 200 : /rad/.test(a) ? v : (v * Math.PI) / 180;
+        const rad = /turn/.test(a)
+          ? v * 2 * Math.PI
+          : /grad/.test(a)
+            ? (v * Math.PI) / 200
+            : /rad/.test(a)
+              ? v
+              : (v * Math.PI) / 180;
         dx = Math.sin(rad);
         dy = -Math.cos(rad);
       }
@@ -594,12 +787,20 @@ function drawGradient(S, str, x, y, w, h) {
       const p = st[st.length - 1].o - st[0].o;
       if (!(p > 0)) return;
       const bands = [];
-      for (let k = Math.floor(-st[st.length - 1].o / p); bands.length < 5000; k++) {
+      for (
+        let k = Math.floor(-st[st.length - 1].o / p);
+        bands.length < 5000;
+        k++
+      ) {
         if (st[0].o + k * p >= 1) break;
-        for (let i = 0; i < st.length - 1; i++) if (st[i + 1].o > st[i].o) bands.push([st[i], st[i + 1], k * p]);
+        for (let i = 0; i < st.length - 1; i++)
+          if (st[i + 1].o > st[i].o) bands.push([st[i], st[i + 1], k * p]);
       }
-      const solid = bands.every(([a, b]) => a.col.a === b.col.a && a.col.c.join() === b.col.c.join());
-      if (!solid) return warn('repeating gradient with smooth stops is not supported');
+      const solid = bands.every(
+        ([a, b]) => a.col.a === b.col.a && a.col.c.join() === b.col.c.join()
+      );
+      if (!solid)
+        return warn('repeating gradient with smooth stops is not supported');
       tile(() => {
         page.transform(dx, dy, -dy, dx, w / 2, h / 2);
         for (const [a, b, sh] of bands) {
@@ -616,17 +817,30 @@ function drawGradient(S, str, x, y, w, h) {
     }
     const cx = w / 2;
     const cy = h / 2;
-    const co = [cx - (dx * L) / 2, cy - (dy * L) / 2, cx + (dx * L) / 2, cy + (dy * L) / 2];
+    const co = [
+      cx - (dx * L) / 2,
+      cy - (dy * L) / 2,
+      cx + (dx * L) / 2,
+      cy + (dy * L) / 2
+    ];
     if (st.every((s) => s.col.a >= 1)) {
       tile(() => {
         setA(S, 1);
         page.shading(S.doc.addShading({ coords: co, stops: vectorStops(st) }));
       });
     } else {
-      rasterGradient(S, x, y, w, h, (g, add) => {
-        g.fillStyle = add(g.createLinearGradient(co[0], co[1], co[2], co[3]));
-        g.fillRect(0, 0, w, h);
-      }, st);
+      rasterGradient(
+        S,
+        x,
+        y,
+        w,
+        h,
+        (g, add) => {
+          g.fillStyle = add(g.createLinearGradient(co[0], co[1], co[2], co[3]));
+          g.fillRect(0, 0, w, h);
+        },
+        st
+      );
     }
     return;
   }
@@ -637,7 +851,8 @@ function drawGradient(S, str, x, y, w, h) {
   if (/^(circle|ellipse|closest|farthest|at\s)/.test(parts[0])) {
     const head = parts.shift();
     if (/circle/.test(head)) shape = 'circle';
-    const e = /(closest-side|closest-corner|farthest-side|farthest-corner)/.exec(head);
+    const e =
+      /(closest-side|closest-corner|farthest-side|farthest-corner)/.exec(head);
     if (e) ext = e[1];
     const at = /at\s+(\S+)(?:\s+(\S+))?/.exec(head);
     if (at) {
@@ -650,7 +865,14 @@ function drawGradient(S, str, x, y, w, h) {
   let rx;
   let ry;
   if (shape === 'circle') {
-    rx = ry = ext === 'closest-side' ? Math.min(...near) : ext === 'farthest-side' ? Math.max(...far) : ext === 'closest-corner' ? Math.hypot(...near) : Math.hypot(...far);
+    rx = ry =
+      ext === 'closest-side'
+        ? Math.min(...near)
+        : ext === 'farthest-side'
+          ? Math.max(...far)
+          : ext === 'closest-corner'
+            ? Math.hypot(...near)
+            : Math.hypot(...far);
   } else {
     const k = /corner/.test(ext) ? Math.SQRT2 : 1;
     const b = /closest/.test(ext) ? near : far;
@@ -666,15 +888,28 @@ function drawGradient(S, str, x, y, w, h) {
       setA(S, 1);
       page.transform(1, 0, 0, 1, cx, cy);
       page.transform(1, 0, 0, sY, 0, 0);
-      page.shading(S.doc.addShading({ coords: [0, 0, 0, 0, 0, rx], stops: vectorStops(st) }));
+      page.shading(
+        S.doc.addShading({
+          coords: [0, 0, 0, 0, 0, rx],
+          stops: vectorStops(st)
+        })
+      );
     });
   } else {
-    rasterGradient(S, x, y, w, h, (g, add) => {
-      g.translate(cx, cy);
-      g.scale(1, sY);
-      g.fillStyle = add(g.createRadialGradient(0, 0, 0, 0, 0, rx));
-      g.fillRect(-cx, -cy / sY, w, h / sY);
-    }, st);
+    rasterGradient(
+      S,
+      x,
+      y,
+      w,
+      h,
+      (g, add) => {
+        g.translate(cx, cy);
+        g.scale(1, sY);
+        g.fillStyle = add(g.createRadialGradient(0, 0, 0, 0, 0, rx));
+        g.fillRect(-cx, -cy / sY, w, h / sY);
+      },
+      st
+    );
   }
 }
 
@@ -701,7 +936,17 @@ function paintShadows(S, cs, r, rad) {
         const hh = r.h - 2 * e;
         if (hw <= 0 || hh <= 0) continue;
         const hole = { x: r.x + e + ox, y: r.y + e + oy, w: hw, h: hh };
-        const rr = (rad || [[0, 0], [0, 0], [0, 0], [0, 0]]).map(([a, b]) => [a > 0 ? Math.max(0, a - e) : 0, b > 0 ? Math.max(0, b - e) : 0]);
+        const rr = (
+          rad || [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0, 0]
+          ]
+        ).map(([a, b]) => [
+          a > 0 ? Math.max(0, a - e) : 0,
+          b > 0 ? Math.max(0, b - e) : 0
+        ]);
         page.save();
         pathBox(page, r.x, r.y, r.w, r.h, rad);
         pathBox(page, hole.x, hole.y, hole.w, hole.h, rr);
@@ -724,7 +969,17 @@ function paintShadows(S, cs, r, rad) {
       const w = r.w + 2 * e;
       const h = r.h + 2 * e;
       if (w <= 0 || h <= 0) continue;
-      const rr = (rad || [[0, 0], [0, 0], [0, 0], [0, 0]]).map(([a, b]) => [a > 0 ? Math.max(0, a + e) : 0, b > 0 ? Math.max(0, b + e) : 0]);
+      const rr = (
+        rad || [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+          [0, 0]
+        ]
+      ).map(([a, b]) => [
+        a > 0 ? Math.max(0, a + e) : 0,
+        b > 0 ? Math.max(0, b + e) : 0
+      ]);
       page.alpha(S.alpha * p);
       pathBox(page, r.x + ox - e, r.y + oy - e, w, h, rr);
       page.paint('f');
@@ -742,7 +997,10 @@ function paintBackground(S, cs, r, rad, bw) {
   const [bt, br, bb, bl] = bw;
   let c = { x: r.x, y: r.y, w: r.w, h: r.h };
   let crad = rad;
-  if (cs.backgroundClip === 'padding-box' || cs.backgroundClip === 'content-box') {
+  if (
+    cs.backgroundClip === 'padding-box' ||
+    cs.backgroundClip === 'content-box'
+  ) {
     c = { x: r.x + bl, y: r.y + bt, w: r.w - bl - br, h: r.h - bt - bb };
     if (rad) crad = insetRad(rad, bt, br, bb, bl);
   }
@@ -782,7 +1040,10 @@ function paintBackground(S, cs, r, rad, bw) {
       let tw;
       let th;
       if (sz === 'cover' || sz === 'contain') {
-        const k = sz === 'cover' ? Math.max(ow / natw, oh / nath) : Math.min(ow / natw, oh / nath);
+        const k =
+          sz === 'cover'
+            ? Math.max(ow / natw, oh / nath)
+            : Math.min(ow / natw, oh / nath);
         tw = natw * k;
         th = nath * k;
       } else {
@@ -807,7 +1068,12 @@ function paintBackground(S, cs, r, rad, bw) {
       const axis = (start, size, c0, c1, rep) => {
         if (!rep) return [start];
         const out = [];
-        for (let v = start - Math.ceil((start - c0) / size) * size; v < c1 && out.length < 3000; v += size) out.push(v);
+        for (
+          let v = start - Math.ceil((start - c0) / size) * size;
+          v < c1 && out.length < 3000;
+          v += size
+        )
+          out.push(v);
         return out;
       };
       for (const ty of axis(y0, th, c.y, c.y + c.h, repY)) {
@@ -832,7 +1098,7 @@ function strokeSide(S, i, r, bw, st, col, collapse) {
     [x, y + e, x + w, y + e],
     [x + w - e, y, x + w - e, y + h],
     [x, y + h - e, x + w, y + h - e],
-    [x + e, y, x + e, y + h],
+    [x + e, y, x + e, y + h]
   ][i];
   page.save();
   page.stroke(col.c);
@@ -854,35 +1120,70 @@ function strokeSide(S, i, r, bw, st, col, collapse) {
 function paintBorders(S, cs, r, rad, collapse, flags) {
   const page = S.page;
   const names = ['Top', 'Right', 'Bottom', 'Left'];
-  const bw = names.map((n) => adj(S, parseFloat(cs['border' + n + 'Width']) || 0));
+  const bw = names.map((n) =>
+    adj(S, parseFloat(cs['border' + n + 'Width']) || 0)
+  );
   const st = names.map((n) => cs['border' + n + 'Style']);
   const col = names.map((n) => parseColor(cs['border' + n + 'Color']));
-  const ok = names.map((_, i) => bw[i] > 0 && col[i] && st[i] !== 'none' && st[i] !== 'hidden');
+  const ok = names.map(
+    (_, i) => bw[i] > 0 && col[i] && st[i] !== 'none' && st[i] !== 'hidden'
+  );
   if (flags && flags.skipL) ok[3] = false;
   if (flags && flags.skipR) ok[1] = false;
   if (!ok.some(Boolean)) return;
   if (collapse) {
-    for (let i = 0; i < 4; i++) if (ok[i]) strokeSide(S, i, r, bw, st[i], col[i], true);
+    for (let i = 0; i < 4; i++)
+      if (ok[i]) strokeSide(S, i, r, bw, st[i], col[i], true);
     return;
   }
   const [T, R, B, Lw] = bw;
-  const same = ok.every(Boolean) && st.every((s) => s === 'solid') && col.every((c) => c.a === col[0].a && c.c.join() === col[0].c.join());
+  const same =
+    ok.every(Boolean) &&
+    st.every((s) => s === 'solid') &&
+    col.every((c) => c.a === col[0].a && c.c.join() === col[0].c.join());
   if (same) {
     page.save();
     page.fill(col[0].c);
     setA(S, col[0].a);
     pathBox(page, r.x, r.y, r.w, r.h, rad);
-    pathBox(page, r.x + Lw, r.y + T, r.w - Lw - R, r.h - T - B, rad ? insetRad(rad, T, R, B, Lw) : null);
+    pathBox(
+      page,
+      r.x + Lw,
+      r.y + T,
+      r.w - Lw - R,
+      r.h - T - B,
+      rad ? insetRad(rad, T, R, B, Lw) : null
+    );
     page.paint('f*');
     page.restore();
     return;
   }
   const { x, y, w, h } = r;
   const polys = [
-    [[x, y], [x + w, y], [x + w - R, y + T], [x + Lw, y + T]],
-    [[x + w, y], [x + w, y + h], [x + w - R, y + h - B], [x + w - R, y + T]],
-    [[x + w, y + h], [x, y + h], [x + Lw, y + h - B], [x + w - R, y + h - B]],
-    [[x, y + h], [x, y], [x + Lw, y + T], [x + Lw, y + h - B]],
+    [
+      [x, y],
+      [x + w, y],
+      [x + w - R, y + T],
+      [x + Lw, y + T]
+    ],
+    [
+      [x + w, y],
+      [x + w, y + h],
+      [x + w - R, y + h - B],
+      [x + w - R, y + T]
+    ],
+    [
+      [x + w, y + h],
+      [x, y + h],
+      [x + Lw, y + h - B],
+      [x + w - R, y + h - B]
+    ],
+    [
+      [x, y + h],
+      [x, y],
+      [x + Lw, y + T],
+      [x + Lw, y + h - B]
+    ]
   ];
   page.save();
   if (hasRad(rad)) {
@@ -900,10 +1201,10 @@ function paintBorders(S, cs, r, rad, collapse, flags) {
       strokeSide(S, i, r, inner, 'solid', col[i], false);
       const rr = { x, y, w, h };
       const off = (bw[i] * 2) / 3;
-      if (i === 0) rr.y += off, rr.h -= off;
+      if (i === 0) ((rr.y += off), (rr.h -= off));
       else if (i === 1) rr.w -= off;
       else if (i === 2) rr.h -= off;
-      else rr.x += off, rr.w -= off;
+      else ((rr.x += off), (rr.w -= off));
       strokeSide(S, i, rr, inner, 'solid', col[i], false);
     } else {
       page.fill(col[i].c);
@@ -921,7 +1222,9 @@ function paintBorders(S, cs, r, rad, collapse, flags) {
 function paintImg(S, el, cs, r, bw, rad) {
   const rec = S.imgs.get(el);
   if (!rec) return;
-  const pad = ['Top', 'Right', 'Bottom', 'Left'].map((n) => parseFloat(cs['padding' + n]) || 0);
+  const pad = ['Top', 'Right', 'Bottom', 'Left'].map(
+    (n) => parseFloat(cs['padding' + n]) || 0
+  );
   const x = r.x + bw[3] + pad[3];
   const y = r.y + bw[0] + pad[0];
   const w = r.w - bw[1] - bw[3] - pad[1] - pad[3];
@@ -945,10 +1248,31 @@ function paintImg(S, el, cs, r, bw, rad) {
   const op = String(cs.objectPosition || '50% 50%').split(/\s+/);
   const page = S.page;
   page.save();
-  pathBox(page, x, y, w, h, rad ? insetRad(rad, bw[0] + pad[0], bw[1] + pad[1], bw[2] + pad[2], bw[3] + pad[3]) : null);
+  pathBox(
+    page,
+    x,
+    y,
+    w,
+    h,
+    rad
+      ? insetRad(
+        rad,
+        bw[0] + pad[0],
+        bw[1] + pad[1],
+        bw[2] + pad[2],
+        bw[3] + pad[3]
+      )
+      : null
+  );
   page.clip();
   setA(S, 1);
-  page.image(rec, x + posVal(op[0], w, dw), y + posVal(op[1] || '50%', h, dh), dw, dh);
+  page.image(
+    rec,
+    x + posVal(op[0], w, dw),
+    y + posVal(op[1] || '50%', h, dh),
+    dw,
+    dh
+  );
   page.restore();
 }
 
@@ -967,7 +1291,6 @@ function paintText(S, node) {
   if (nb.bottom - o.y < S.top - 2 || nb.top - o.y > S.bottom + 2) return;
   const size = parseFloat(cs.fontSize);
   const font = pickFont(cs.fontFamily, cs.fontWeight, cs.fontStyle);
-  if (!font) throw new Error('htmlpdf: no font registered for "' + cs.fontFamily + '" (call registerFont first)');
   const col = parseColor(cs.color) || { c: [0, 0, 0], a: 1 };
   const ls = parseFloat(cs.letterSpacing) || 0;
   const tt = cs.textTransform;
@@ -1020,13 +1343,20 @@ function paintText(S, node) {
       const first = w.chars[0];
       const last = w.chars[w.chars.length - 1];
       const predicted = enc.width * size + ls * w.chars.length;
-      const runs = w.chars.length === 1 || Math.abs(predicted - (last.r - first.x)) <= 0.35 ? [{ x: first.x, hex: enc.hex, sp: ls }] : w.chars.map((c) => ({ x: c.x, hex: font.encode(c.ch).hex, sp: 0 }));
+      const runs =
+        w.chars.length === 1 || Math.abs(predicted - (last.r - first.x)) <= 0.35
+          ? [{ x: first.x, hex: enc.hex, sp: ls }]
+          : w.chars.map((c) => ({ x: c.x, hex: font.encode(c.ch).hex, sp: 0 }));
       for (const u of runs) {
         page.save();
         page.fill(fillCol.c);
         if (sc) page.stroke(sc.c);
         setA(S, fillCol.a);
-        page.text(font, size, u.x + dx, y, u.hex, { mode, strokeW: sw, spacing: u.sp });
+        page.text(font, size, u.x + dx, y, u.hex, {
+          mode,
+          strokeW: sw,
+          spacing: u.sp
+        });
         page.restore();
       }
     }
@@ -1036,7 +1366,8 @@ function paintText(S, node) {
     const first = splitTop(ts)[0];
     const cm = /(rgba?\([^)]*\)|#[0-9a-f]+)/i.exec(first);
     const sh = parseColor(cm ? cm[1] : cs.color);
-    const nums = (cm ? first.replace(cm[1], '') : first).match(/-?[\d.]+px/g) || [];
+    const nums =
+      (cm ? first.replace(cm[1], '') : first).match(/-?[\d.]+px/g) || [];
     if (sh) emit(sh, parseFloat(nums[0]) || 0, parseFloat(nums[1]) || 0, 0);
   }
   if (sc && strokeFirst) {
@@ -1051,9 +1382,12 @@ function paintText(S, node) {
       page.fill(dc.c);
       setA(S, dc.a);
       const b = s.top + base;
-      if (/underline/.test(deco)) page.rect(s.x0, b + size * 0.1, s.x1 - s.x0, th);
-      if (/line-through/.test(deco)) page.rect(s.x0, b - size * 0.3, s.x1 - s.x0, th);
-      if (/overline/.test(deco)) page.rect(s.x0, b - size * 0.9, s.x1 - s.x0, th);
+      if (/underline/.test(deco))
+        page.rect(s.x0, b + size * 0.1, s.x1 - s.x0, th);
+      if (/line-through/.test(deco))
+        page.rect(s.x0, b - size * 0.3, s.x1 - s.x0, th);
+      if (/overline/.test(deco))
+        page.rect(s.x0, b - size * 0.9, s.x1 - s.x0, th);
       page.paint('f');
       page.restore();
     }
@@ -1068,7 +1402,8 @@ function paintEl(S, el) {
   const page = S.page;
   const o = S.o;
   const op = parseFloat(cs.opacity);
-  const tm = cs.transform && cs.transform !== 'none' ? parseMatrix(cs.transform) : null;
+  const tm =
+    cs.transform && cs.transform !== 'none' ? parseMatrix(cs.transform) : null;
   const origin = cs.transformOrigin;
   const prevAlpha = S.alpha;
   const prevNonTrivial = S.nonTrivial;
@@ -1078,9 +1413,21 @@ function paintEl(S, el) {
   // by subtracting the translate. For rotation/scale we must neutralise the
   // transform to measure the untransformed box (the element is a clone inside a
   // hidden host, so this has no visible effect).
-  if (tm && S.nonTrivial === false && tm[0] === 1 && tm[1] === 0 && tm[2] === 0 && tm[3] === 1) {
+  if (
+    tm &&
+    S.nonTrivial === false &&
+    tm[0] === 1 &&
+    tm[1] === 0 &&
+    tm[2] === 0 &&
+    tm[3] === 1
+  ) {
     const b = el.getBoundingClientRect();
-    rect = { left: b.left - tm[4], top: b.top - tm[5], width: b.width, height: b.height };
+    rect = {
+      left: b.left - tm[4],
+      top: b.top - tm[5],
+      width: b.width,
+      height: b.height
+    };
   }
   if (!rect) {
     const prevT = el.style.transform;
@@ -1088,7 +1435,8 @@ function paintEl(S, el) {
     rect = el.getBoundingClientRect();
     if (tm) el.style.transform = prevT;
   }
-  if (tm && (tm[0] !== 1 || tm[1] !== 0 || tm[2] !== 0 || tm[3] !== 1)) S.nonTrivial = true;
+  if (tm && (tm[0] !== 1 || tm[1] !== 0 || tm[2] !== 0 || tm[3] !== 1))
+    S.nonTrivial = true;
   const tag = el.tagName.toLowerCase();
   const display = cs.display;
   const inline = display === 'inline';
@@ -1097,7 +1445,7 @@ function paintEl(S, el) {
   if (saved) page.save();
   if (op < 1) S.alpha *= op;
   if (tm) {
-    const [ox, oy] = origin.split(' ').map(parseFloat);
+    const [ox, oy] = origin.split(' ').map((v) => parseFloat(v) || 0);
     const px = rect.left - o.x + ox;
     const py = rect.top - o.y + oy;
     page.transform(1, 0, 0, 1, px, py);
@@ -1105,21 +1453,40 @@ function paintEl(S, el) {
     page.transform(1, 0, 0, 1, -px, -py);
   }
   if (clip) {
-    const cr = { x: rect.left - o.x, y: rect.top - o.y, w: rect.width, h: rect.height };
+    const cr = {
+      x: rect.left - o.x,
+      y: rect.top - o.y,
+      w: rect.width,
+      h: rect.height
+    };
     clipPathShape(page, cs, cr);
   }
   if (display !== 'contents' && cs.visibility === 'visible') {
-    const tcs = el.closest && (display.startsWith('table') ? el.closest('table') : null);
-    const collapse = !!tcs && getComputedStyle(tcs).borderCollapse === 'collapse' && display !== 'table-column' && display !== 'table-column-group';
+    const tcs =
+      el.closest && (display.startsWith('table') ? el.closest('table') : null);
+    const collapse =
+      !!tcs &&
+      getComputedStyle(tcs).borderCollapse === 'collapse' &&
+      display !== 'table-column' &&
+      display !== 'table-column-group';
     const frags = inline ? [...el.getClientRects()] : [rect];
     frags.forEach((fr, i) => {
-      const r = { x: fr.left - o.x, y: fr.top - o.y, w: fr.width, h: fr.height };
+      const r = {
+        x: fr.left - o.x,
+        y: fr.top - o.y,
+        w: fr.width,
+        h: fr.height
+      };
       if (r.w <= 0 && r.h <= 0) return;
       const rad = inline ? null : radiiOf(cs, r.w, r.h);
-      const flags = inline ? { skipL: i > 0, skipR: i < frags.length - 1 } : null;
+      const flags = inline
+        ? { skipL: i > 0, skipR: i < frags.length - 1 }
+        : null;
       const bw = ['Top', 'Right', 'Bottom', 'Left'].map((n) => {
         const st = cs['border' + n + 'Style'];
-        return st === 'none' || st === 'hidden' ? 0 : adj(S, parseFloat(cs['border' + n + 'Width']) || 0);
+        return st === 'none' || st === 'hidden'
+          ? 0
+          : adj(S, parseFloat(cs['border' + n + 'Width']) || 0);
       });
       if (flags && flags.skipL) bw[3] = 0;
       if (flags && flags.skipR) bw[1] = 0;
@@ -1127,29 +1494,47 @@ function paintEl(S, el) {
       if (!collapse) paintShadows(S, cs, r, rad);
       paintBackground(S, cs, r, rad, collapse ? [0, 0, 0, 0] : bw);
       paintBorders(S, cs, r, rad, collapse, flags);
-      if (tag === 'img' || tag === 'canvas' || tag === 'svg') paintImg(S, el, cs, r, bw, rad);
+      if (tag === 'img' || tag === 'canvas' || tag === 'svg')
+        paintImg(S, el, cs, r, bw, rad);
     });
   }
   if (tag !== 'img' && tag !== 'canvas' && tag !== 'svg') {
-    const clip = !inline && (cs.overflowX !== 'visible' || cs.overflowY !== 'visible');
+    const clip =
+      !inline && (cs.overflowX !== 'visible' || cs.overflowY !== 'visible');
     if (clip) {
-      const r = { x: rect.left - o.x, y: rect.top - o.y, w: rect.width, h: rect.height };
+      const r = {
+        x: rect.left - o.x,
+        y: rect.top - o.y,
+        w: rect.width,
+        h: rect.height
+      };
       const bt = parseFloat(cs.borderTopWidth) || 0;
       const br = parseFloat(cs.borderRightWidth) || 0;
       const bb = parseFloat(cs.borderBottomWidth) || 0;
       const bl = parseFloat(cs.borderLeftWidth) || 0;
       const rad = radiiOf(cs, r.w, r.h);
       page.save();
-      pathBox(page, r.x + bl, r.y + bt, r.w - bl - br, r.h - bt - bb, hasRad(rad) ? insetRad(rad, bt, br, bb, bl) : null);
+      pathBox(
+        page,
+        r.x + bl,
+        r.y + bt,
+        r.w - bl - br,
+        r.h - bt - bb,
+        hasRad(rad) ? insetRad(rad, bt, br, bb, bl) : null
+      );
       page.clip();
     }
     const kids = [];
     for (const n of el.childNodes) {
       if (n.nodeType === 1) {
         const c = getComputedStyle(n);
-        const z = c.position !== 'static' && c.zIndex !== 'auto' ? Number(c.zIndex) || 0 : 0;
+        const z =
+          c.position !== 'static' && c.zIndex !== 'auto'
+            ? Number(c.zIndex) || 0
+            : 0;
         kids.push({ n, z });
-      } else if (n.nodeType === 3 && n.nodeValue.trim() !== '') kids.push({ n, z: 0 });
+      } else if (n.nodeType === 3 && n.nodeValue.trim() !== '')
+        kids.push({ n, z: 0 });
     }
     if (kids.some((k) => k.z !== 0)) kids.sort((a, b) => a.z - b.z);
     for (const k of kids) {
@@ -1167,22 +1552,47 @@ function paintEl(S, el) {
 function paginate(host, contentH) {
   const y0 = host.getBoundingClientRect().top;
   const push = (el, d) => {
-    el.style.marginTop = (parseFloat(getComputedStyle(el).marginTop) || 0) + d + 'px';
+    el.style.marginTop =
+      (parseFloat(getComputedStyle(el).marginTop) || 0) + d + 'px';
   };
   for (const el of host.querySelectorAll('*')) {
     const cs = getComputedStyle(el);
     if (cs.display === 'none') continue;
     const r = el.getBoundingClientRect();
     const top = r.top - y0;
-    const force = /^(page|always|left|right)$/.test(cs.breakBefore) || cs.pageBreakBefore === 'always';
+    const force =
+      /^(page|always|left|right)$/.test(cs.breakBefore) ||
+      cs.pageBreakBefore === 'always';
     const avoid = cs.breakInside === 'avoid' || cs.pageBreakInside === 'avoid';
-    if (force && top > 0.5 && top % contentH > 0.5) push(el, contentH - (top % contentH));
-    else if (avoid && r.height <= contentH && Math.floor(top / contentH) !== Math.floor((top + r.height - 0.01) / contentH)) push(el, contentH - (top % contentH));
+    // A line box reaches above the element's border-box top by (lineHeight - ascent);
+    // push an extra line so the whole first line lands past the page boundary.
+    const lead =
+      parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2 || 0;
+    if (force && top > 0.5 && top % contentH > 0.5)
+      push(el, contentH - (top % contentH) + lead);
+    else if (
+      avoid &&
+      r.height <= contentH &&
+      Math.floor(top / contentH) !==
+      Math.floor((top + r.height - 0.01) / contentH) &&
+      top % contentH > 0.5
+    )
+      push(el, contentH - (top % contentH) + lead);
   }
 }
 
 export async function render(host, doc, opts) {
-  const S = { doc, page: null, o: null, alpha: 1, imgs: new Map(), hair: (opts.hairline || 0) * MM, top: 0, bottom: Infinity, nonTrivial: false };
+  const S = {
+    doc,
+    page: null,
+    o: null,
+    alpha: 1,
+    imgs: new Map(),
+    hair: (opts.hairline || 0) * MM,
+    top: 0,
+    bottom: Infinity,
+    nonTrivial: false
+  };
   materializePseudos(host);
   await preload(S, host);
   const pw = opts.width * MM;

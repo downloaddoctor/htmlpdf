@@ -21,15 +21,26 @@ export { registerFont };
 export async function registerFontUrl(family, url, o = {}) {
   const res = await fetch(url);
   if (!res.ok) throw new Error('htmlpdf: cannot load font ' + url);
-  registerFont({ family, weight: o.weight, style: o.style, data: await res.arrayBuffer() });
+  registerFont({
+    family,
+    weight: o.weight,
+    style: o.style,
+    data: await res.arrayBuffer()
+  });
 }
 
 const loading = new Map();
 function loadFonts(list) {
   return Promise.all(
     list.map((f) => {
-      const url = String(f.url instanceof URL ? f.url.href : new URL(f.url, document.baseURI).href);
-      const key = [f.family, f.weight || 400, f.style || 'normal', url].join('|');
+      const url = String(
+        f.url instanceof URL
+          ? f.url.href
+          : new URL(f.url, document.baseURI).href
+      );
+      const key = [f.family, f.weight || 400, f.style || 'normal', url].join(
+        '|'
+      );
       if (!loading.has(key)) {
         loading.set(
           key,
@@ -71,7 +82,17 @@ function loadFonts(list) {
  * @returns {Promise<Uint8Array>}
  */
 export async function htmlToPdf(input, opts = {}) {
-  const o = { width: 210, height: 297, margin: 0, background: '#fff', hairline: 0, css: '', fonts: [], noAutoFonts: false, ...opts };
+  const o = {
+    width: 210,
+    height: 297,
+    margin: 0,
+    background: '#fff',
+    hairline: 0,
+    css: '',
+    fonts: [],
+    noAutoFonts: false,
+    ...opts
+  };
   if (o.fonts.length) await loadFonts(o.fonts);
   else if (!o.noAutoFonts) await discoverFonts(document);
   const host = document.createElement('div');
@@ -83,13 +104,23 @@ export async function htmlToPdf(input, opts = {}) {
     host.appendChild(st);
   }
   const body = document.createElement('div');
-  if (typeof input === 'string') body.innerHTML = input;
-  else body.appendChild(input.cloneNode(true));
+  if (typeof input === 'string') {
+    body.innerHTML = input;
+  } else if (input && typeof input.cloneNode === 'function') {
+    body.appendChild(input.cloneNode(true));
+  } else {
+    throw new TypeError(
+      'htmlpdf: input must be an HTML string or a DOM Node' +
+      (input === null
+        ? ' (got null — did your selector match?)'
+        : ' (got ' + typeof input + ')')
+    );
+  }
   host.appendChild(body);
   document.body.appendChild(host);
   try {
     void host.offsetHeight;
-    await discoverFonts(host); // @font-face rules inside the input's inline <style>
+    if (!o.noAutoFonts) await discoverFonts(host); // @font-face rules inside the input's inline <style>
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
     const doc = new PdfDoc();
     await render(host, doc, o);
@@ -127,7 +158,8 @@ export function printPdf(pdf) {
   return new Promise((resolve) => {
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
-    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;pointer-events:none';
+    frame.style.cssText =
+      'position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;pointer-events:none';
     let done = false;
     const finish = () => {
       if (done) return;

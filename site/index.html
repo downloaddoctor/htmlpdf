@@ -120,13 +120,55 @@
         flex: 1 1 60%;
         min-height: 0;
         position: relative;
+        display: flex;
+      }
+
+      .pane {
+        flex: 1 1 50%;
+        min-width: 0;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .pane + .pane {
+        border-left: 1px solid #e4e6ec;
+      }
+
+      .paneLabel {
+        position: absolute;
+        top: 6px;
+        left: 8px;
+        z-index: 2;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7184;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 1px 6px;
+        border-radius: 4px;
+        pointer-events: none;
+      }
+
+      #htmlPreview {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        background: #e9ebf1;
+        padding: 22px 10px 10px;
+      }
+
+      #htmlPreview .page {
+        /* Size + padding come from the live page options (set inline). */
+        transform: scale(var(--scale, 1));
+        transform-origin: top left;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
       }
 
       #out {
-        position: absolute;
-        inset: 0;
+        flex: 1;
+        min-height: 0;
         width: 100%;
-        height: 100%;
         border: 0;
         background: #e9ebf1;
       }
@@ -573,7 +615,14 @@
 
       <section id="right">
         <div id="previewWrap">
-          <iframe id="out" title="PDF preview"></iframe>
+          <div class="pane">
+            <span class="paneLabel">HTML</span>
+            <div id="htmlPreview"></div>
+          </div>
+          <div class="pane">
+            <span class="paneLabel">PDF</span>
+            <iframe id="out" title="PDF preview"></iframe>
+          </div>
         </div>
         <div id="bar">
           <span id="status">starting...</span>
@@ -618,7 +667,7 @@
         Array.from(
           { length: n },
           (_, i) =>
-            `<tr><td style='padding:6px;border:1px solid #d4d7e0'>Service line ${i + 1}</td><td style='padding:6px;border:1px solid #d4d7e0;text-align:right'>$${(i + 1) * 12}.00</td></tr>`
+            `<tr><td>Service line ${i + 1}</td><td class="num">$${(i + 1) * 12}.00</td></tr>`
         ).join('');
 
       const EXAMPLES = [
@@ -626,8 +675,12 @@
           name: 'Hello',
           note: 'The smallest possible call: an HTML string, default A4.',
           opts: { preset: 'a4', margin: 0 },
-          html: `<div style='font-family:Lato;padding:16mm'>
-  <h1 style='margin:0;color:tomato'>Hello PDF</h1>
+          html: `<style>
+  .hello { font-family: Lato; padding: 16mm; }
+  .hello h1 { margin: 0; color: tomato; }
+</style>
+<div class="hello">
+  <h1>Hello PDF</h1>
   <p>Real <b>selectable</b> vector text, laid out by the browser.</p>
 </div>`
         },
@@ -635,62 +688,101 @@
           name: 'Invoice (multi page)',
           note: 'A long table flows onto more pages. A margin keeps content off the edges.',
           opts: { preset: 'a4', margin: 12 },
-          html: `<div style='font-family:Lato'>
-  <h2 style='margin:0;color:#3454d1'>Invoice #1042</h2>
+          html: `<style>
+  .invoice { font-family: Lato; }
+  .invoice h2 { margin: 0; color: #3454d1; }
+  .invoice table { border-collapse: collapse; width: 100%; }
+  .invoice th, .invoice td { padding: 6px; border: 1px solid #d4d7e0; }
+  .invoice thead tr { background: #f0f1f5; }
+  .invoice th { text-align: left; }
+  .invoice .num { text-align: right; }
+  .invoice .total { text-align: right; font-weight: 700; font-size: 18px; }
+</style>
+<div class="invoice">
+  <h2>Invoice #1042</h2>
   <p>Billed to <b>Jane Doe</b></p>
-  <table style='border-collapse:collapse;width:100%'>
-    <tr style='background:#f0f1f5'><th style='text-align:left;padding:6px;border:1px solid #d4d7e0'>Item</th><th style='padding:6px;border:1px solid #d4d7e0'>Price</th></tr>
-    ${rows(45)}
+  <table>
+    <thead><tr><th>Item</th><th>Price</th></tr></thead>
+    <tbody>${rows(45)}</tbody>
   </table>
-  <p style='text-align:right;font-weight:700;font-size:18px'>Total $12,420.00</p>
+  <p class="total">Total $12,420.00</p>
 </div>`
         },
         {
           name: 'Receipt (auto height)',
           note: 'height 0 makes one page exactly as tall as the content. Good for tickets and labels.',
           opts: { preset: 'receipt', margin: 4 },
-          html: `<div style='font-family:Lato;font-size:12px'>
-  <div style='text-align:center;font-size:16px;font-weight:700'>CAFE LATTE</div>
-  <hr style='border:0;border-top:1px dashed #333' />
-  <div style='display:flex;justify-content:space-between'><span>Latte x2</span><span>7.00</span></div>
-  <div style='display:flex;justify-content:space-between'><span>Cake</span><span>4.50</span></div>
-  <hr style='border:0;border-top:1px dashed #333' />
-  <div style='display:flex;justify-content:space-between;font-weight:700'><span>Total</span><span>11.50</span></div>
+          html: `<style>
+  .receipt { font-family: Lato; font-size: 12px; }
+  .receipt .brand { text-align: center; font-size: 16px; font-weight: 700; }
+  .receipt hr { border: 0; border-top: 1px dashed #333; }
+  .receipt .line { display: flex; justify-content: space-between; }
+  .receipt .line.total { font-weight: 700; }
+</style>
+<div class="receipt">
+  <div class="brand">CAFE LATTE</div>
+  <hr />
+  <div class="line"><span>Latte x2</span><span>7.00</span></div>
+  <div class="line"><span>Cake</span><span>4.50</span></div>
+  <hr />
+  <div class="line total"><span>Total</span><span>11.50</span></div>
 </div>`
         },
         {
           name: 'Styling showcase',
           note: 'Gradients, radius, shadows, per-side borders, rotation, opacity, text stroke.',
           opts: { preset: 'a4', margin: 10 },
-          html: `<div style='font-family:Lato;padding:8mm'>
-  <div style='height:60px;border-radius:14px;background:linear-gradient(90deg,#3454d1,#e83e8c);box-shadow:0 6px 14px rgba(0,0,0,.3)'></div>
-  <div style='margin:18px 0;padding:12px;border-left:6px solid tomato;border-bottom:2px dashed #3454d1;background:radial-gradient(circle at 20% 30%,#fff4d6,#ffd6a5)'>Per-side borders on a radial gradient.</div>
-  <div style='display:inline-block;transform:rotate(-6deg);padding:10px 16px;background:#222;color:#fff;border-radius:8px'>Rotated</div>
-  <div style='display:inline-block;opacity:.4;padding:10px 16px;background:#3454d1;color:#fff;border-radius:8px;margin-left:12px'>Opacity .4</div>
-  <p style='font-size:44px;font-weight:700;margin:14px 0;color:transparent;-webkit-text-stroke:1.5px #3454d1'>Outline text</p>
-  <p style='text-decoration:underline;letter-spacing:3px;text-transform:uppercase'>underline, spacing, uppercase</p>
+          html: `<style>
+  .show { font-family: Lato; padding: 8mm; }
+  .show .bar { height: 60px; border-radius: 14px; background: linear-gradient(90deg,#3454d1,#e83e8c); box-shadow: 0 6px 14px rgba(0,0,0,.3); }
+  .show .panel { margin: 18px 0; padding: 12px; border-left: 6px solid tomato; border-bottom: 2px dashed #3454d1; background: radial-gradient(circle at 20% 30%,#fff4d6,#ffd6a5); }
+  .show .tag { display: inline-block; padding: 10px 16px; border-radius: 8px; background: #222; color: #fff; }
+  .show .tag.rot { transform: rotate(-6deg); }
+  .show .tag.dim { opacity: .4; background: #3454d1; margin-left: 12px; }
+  .show .outline { font-size: 44px; font-weight: 700; margin: 14px 0; color: transparent; -webkit-text-stroke: 1.5px #3454d1; }
+  .show .caps { text-decoration: underline; letter-spacing: 3px; text-transform: uppercase; }
+</style>
+<div class="show">
+  <div class="bar"></div>
+  <div class="panel">Per-side borders on a radial gradient.</div>
+  <div class="tag rot">Rotated</div>
+  <div class="tag dim">Opacity .4</div>
+  <p class="outline">Outline text</p>
+  <p class="caps">underline, spacing, uppercase</p>
 </div>`
         },
         {
           name: 'Clipping & effects',
           note: 'clip-path (polygon/ellipse), inset box-shadow, conic gradient.',
           opts: { preset: 'a4', margin: 10 },
-          html: `<div style='font-family:Lato;padding:8mm'>
-  <div style='width:200px;height:200px;background:conic-gradient(from 20deg,#ff6b6b,#feca57,#48dbfb,#ff6b6b);border-radius:16px;box-shadow:inset 0 0 0 8px rgba(0,0,0,.25)'></div>
-  <div style='clip-path:polygon(0 0,100% 0,100% 70%,60% 100%,40% 70%,0 70%);margin-top:20px;width:240px;height:120px;background:linear-gradient(135deg,#3454d1,#e83e8c);box-shadow:inset 0 -20px 30px rgba(0,0,0,.35)'></div>
-  <p style='margin-top:20px'>Inset shadow on the left, polygon clipping below.</p>
+          html: `<style>
+  .clip { font-family: Lato; padding: 8mm; }
+  .clip .cone { width: 200px; height: 200px; background: conic-gradient(from 20deg,#ff6b6b,#feca57,#48dbfb,#ff6b6b); border-radius: 16px; box-shadow: inset 0 0 0 8px rgba(0,0,0,.25); }
+  .clip .poly { margin-top: 20px; width: 240px; height: 120px; background: linear-gradient(135deg,#3454d1,#e83e8c); box-shadow: inset 0 -20px 30px rgba(0,0,0,.35); clip-path: polygon(0 0,100% 0,100% 70%,60% 100%,40% 70%,0 70%); }
+  .clip p { margin-top: 20px; }
+</style>
+<div class="clip">
+  <div class="cone"></div>
+  <div class="poly"></div>
+  <p>Inset shadow on the left, polygon clipping below.</p>
 </div>`
         },
         {
           name: 'Page breaks',
           note: 'break-before: page starts a new page; break-inside: avoid keeps a block together.',
           opts: { preset: 'a4', margin: 14 },
-          html: `<div style='font-family:Lato'>
-  <h1 style='margin:0'>Page one</h1>
+          html: `<style>
+  .breaks { font-family: Lato; }
+  .breaks h1 { margin: 0; }
+  .breaks .newpage { break-before: page; }
+  .breaks .keep { break-inside: avoid; border: 1px solid #333; padding: 10px; margin-top: 12px; }
+</style>
+<div class="breaks">
+  <h1>Page one</h1>
   <p>Some content here.</p>
-  <h1 style='break-before:page;margin:0'>Page two</h1>
+  <h1 class="newpage">Page two</h1>
   <p>Forced onto its own page by <code>break-before: page</code>.</p>
-  <div style='break-inside:avoid;border:1px solid #333;padding:10px;margin-top:12px'>This box never splits across pages.</div>
+  <div class="keep">This box never splits across pages.</div>
 </div>`
         }
       ];
@@ -757,12 +849,14 @@
           );
           lines.push('  ]');
         }
-        const input = $('asNode').checked
-          ? "document.querySelector('#invoice')"
-          : 'html';
-        const head = $('asNode').checked
-          ? '// any element already on your page (it is cloned)'
-          : 'const html = \'<h1 style="font-family:Lato">Hello</h1>\'; // your HTML + CSS string';
+        const src = $('src').value;
+        const htmlLit = 'const html = ' + JSON.stringify(src) + ';';
+        const asNode = $('asNode').checked;
+        const head = asNode
+          ? htmlLit +
+            "\n// any element already on your page works too — it is cloned\nconst node = document.createElement('div');\nnode.innerHTML = html;"
+          : htmlLit + ' // your HTML + CSS string';
+        const input = asNode ? 'node' : 'html';
         return `import { htmlToPdf, downloadPdf } from 'htmlpdf';
 
 ${head}
@@ -802,6 +896,7 @@ downloadPdf(pdf, 'document.pdf'); // or openPdf(pdf) / printPdf(pdf)`;
           if (url) URL.revokeObjectURL(url);
           url = pdfBlobUrl(pdf);
           $('out').src = url;
+          renderHtmlPreview($('src').value, o);
           $('status').textContent =
             (pdf.length / 1024).toFixed(1) +
             ' KB, ' +
@@ -814,6 +909,55 @@ downloadPdf(pdf, 'document.pdf'); // or openPdf(pdf) / printPdf(pdf)`;
           if (holder) holder.remove();
         }
       }
+
+      let previewPage = null;
+      function scalePreview() {
+        const host = $('htmlPreview');
+        if (!previewPage || !host.clientWidth) return;
+        const avail = host.clientWidth - 20; // padding
+        const pageW = previewPage.offsetWidth || 794;
+        const s = Math.min(1, avail / pageW);
+        previewPage.style.setProperty('--scale', s);
+        // Reserve scaled height so the scroll area is correct.
+        host.querySelector('.pageWrap').style.height =
+          previewPage.offsetHeight * s + 'px';
+      }
+
+      function renderHtmlPreview(html, o) {
+        const host = $('htmlPreview');
+        host.innerHTML = '';
+        const wrapOuter = document.createElement('div');
+        wrapOuter.className = 'pageWrap';
+        wrapOuter.style.position = 'relative';
+        const page = document.createElement('div');
+        page.className = 'page';
+        page.style.position = 'absolute';
+        page.style.top = '0';
+        page.style.left = '0';
+        // Size the preview page from the live options (mm); height 0 = auto.
+        page.style.width = o.width + 'mm';
+        page.style.padding = o.margin + 'mm';
+        page.style.height = o.height > 0 ? o.height + 'mm' : 'auto';
+        page.style.background =
+          o.background === null ? 'transparent' : o.background;
+        const shadow = page.attachShadow({ mode: 'open' });
+        // Carry over @font-face + base typography so the preview matches the PDF;
+        // the shadow root keeps the playground's own CSS from leaking in.
+        const base = document.createElement('style');
+        base.textContent =
+          ':host{display:block;font:16px/1.4 system-ui,sans-serif;color:#1a1d29}' +
+          "@font-face{font-family:'Lato';font-weight:400;src:url('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Regular.ttf')}" +
+          "@font-face{font-family:'Lato';font-weight:700;src:url('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Bold.ttf')}";
+        shadow.appendChild(base);
+        const content = document.createElement('div');
+        content.innerHTML = html;
+        shadow.appendChild(content);
+        wrapOuter.appendChild(page);
+        host.appendChild(wrapOuter);
+        previewPage = page;
+        scalePreview();
+      }
+      addEventListener('resize', () => requestAnimationFrame(scalePreview));
 
       let timer = 0;
       const later = () => {
