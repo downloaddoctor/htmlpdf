@@ -37,15 +37,17 @@ downloadPdf(pdf, 'invoice.pdf');
 - `opts.background`: CSS colour, default `'#fff'`, `null` = none.
 - `opts.hairline`: mm width for borders thinner than 1px, default 0 (keep 1px).
 - `opts.css`: extra CSS string applied to the content.
-- `opts.fonts`: `[{ family, weight = 400, style = 'normal', url }]`, TrueType `.ttf` files, fetched once and cached. Required: at least one font must be provided.
+- `opts.fonts`: `[{ family, weight = 400, style = 'normal', url }]`, TrueType `.ttf` files, fetched once and cached. Optional: if omitted, `@font-face` rules are discovered automatically from the page and from inline `opts.css`; faces still missing fall back to the PDF standard 14 fonts (Helvetica/Times/Courier) so no font files are needed.
+- `opts.noAutoFonts`: boolean, default false. Set true to disable automatic `@font-face` discovery.
 
 Helpers: `downloadPdf(pdf, name)`, `openPdf(pdf)`, `printPdf(pdf)`, `pdfBlobUrl(pdf)`.
 Low level: `registerFont({ family, weight, style, data })`, `registerFontUrl(family, url, { weight, style })`.
 
 ## Rules an LLM should follow when generating code
 
-- Always pass `fonts`. They must be the same `.ttf` files the CSS uses (declare matching `@font-face` or use installed fonts with the same family name). OTF/CFF and `.ttc` are not supported.
-- Use font-family names that match `opts.fonts[].family`, otherwise the first registered font is used.
+- You may omit `fonts` entirely: the library will try to read `@font-face` rules (including inside `opts.css`) and embed matching `.ttf`/data: files. If no TrueType source can be fetched, text renders with a standard 14 PDF font (Helvetica/Times/Courier picked from the computed `font-family`). OTF/CFF and `.ttc` are not supported.
+- For pixel-exact typography (metrics, glyphs, full Unicode), still pass `fonts` — the fallback approximates the family only.
+- Use font-family names that match `opts.fonts[].family` (or an `@font-face` family), otherwise the first registered font is used.
 - Pages: content longer than the page flows onto more pages. Use `break-before: page` and `break-inside: avoid`.
 - Runs only in a browser (needs DOM, canvas, Range). It does not work in Node without a DOM.
 - Cross-origin images need CORS headers, otherwise they are skipped with a console warning.
